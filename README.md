@@ -19,7 +19,7 @@
 
 ## Introduction
 
-StepIt Camera is a ROS2 driver for a camera connected over USB, written for a Canon EOS 5D Mark II. It does three things:
+StepIt Camera is a ROS2 driver for a DSLR or mirrorless camera connected over USB. It does three things:
 
 - it streams the live view of the camera, on request;
 - it downloads every picture the camera takes, saves it, and publishes it;
@@ -27,7 +27,7 @@ StepIt Camera is a ROS2 driver for a camera connected over USB, written for a Ca
 
 The driver does not take pictures itself: an external precision device fires the camera through the remote shutter release cable. The driver notices each picture as soon as the camera reports it, and downloads it.
 
-The camera is driven through [libgphoto2](http://www.gphoto.org/proj/libgphoto2/), so any camera that libgphoto2 supports with _Liveview_ and _Configuration_ should work too. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it is built.
+The camera is driven through [libgphoto2](http://www.gphoto.org/proj/libgphoto2/), so it works with the cameras that libgphoto2 [supports](http://www.gphoto.org/proj/libgphoto2/support.php) with _Liveview_ and _Configuration_, which includes most Canon EOS cameras. On Nikon and Sony cameras, libgphoto2 names the aperture `f-number` rather than `aperture`, so the driver cannot set their aperture yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it is built.
 
 ## Prerequisites
 
@@ -42,10 +42,10 @@ We do not need a camera to try it out: the driver can run a fake camera, which s
 
 For a real application, we need:
 
-- 1 x Canon EOS 5D Mark II, or another camera supported by libgphoto2.
-- 1 x USB cable, Mini-B for the 5D Mark II.
+- 1 x camera supported by libgphoto2 with _Liveview_ and _Configuration_.
+- 1 x USB cable to connect the camera to the computer.
 - 1 x AC adapter for the camera, because the live view drains the battery quickly.
-- The external device triggering the camera through its remote shutter release socket (N3 on the 5D Mark II).
+- The external device triggering the camera through its remote shutter release socket.
 
 ## Install StepIt Camera
 
@@ -110,11 +110,11 @@ test
 
 ## Prepare the Camera
 
-The driver can set the exposure only as far as the camera allows it. On the 5D Mark II:
+The driver can set the exposure only as far as the camera allows it. The modes below are named as on a Canon; Nikon and Sony call Av and Tv A and S.
 
-- Turn the mode dial to **M**. The mode dial is mechanical and cannot be changed over USB. On M, we can set the ISO, the shutter speed and the aperture. On Av, only the aperture; on Tv, only the shutter speed.
+- Turn the mode dial to **M**. On most cameras the mode dial is mechanical and cannot be changed over USB. On M, we can set the ISO, the shutter speed and the aperture. On Av, only the aperture; on Tv, only the shutter speed.
 - Use a lens whose aperture the camera controls. A manual lens has no aperture setting.
-- Enable the live view in the menu _Live View/Movie func. set_, with _Stills only_ or _Stills+movie_. Without it, the camera refuses to stream.
+- Enable the live view for stills in the camera's menu, if it has such a setting. Without it, the camera may refuse to stream.
 - Set _Auto power off_ to _Off_. Otherwise the camera goes to sleep and the driver loses it until it wakes up.
 - Plug the external device into the remote shutter release socket, and the USB cable into the computer.
 
@@ -146,7 +146,7 @@ ros2 service call /camera/start_streaming std_srvs/srv/Trigger
 ros2 service call /camera/stop_streaming std_srvs/srv/Trigger
 ```
 
-The frames are published as JPEG images on `/camera/preview/compressed` (`sensor_msgs/msg/CompressedImage`), exactly as the camera sends them, with no decoding. On the 5D Mark II, a frame is 1024 x 680 pixels. Watch them with:
+The frames are published as JPEG images on `/camera/preview/compressed` (`sensor_msgs/msg/CompressedImage`), exactly as the camera sends them, with no decoding. Their size depends on the camera. Watch them with:
 
 ```
 ros2 run rqt_image_view rqt_image_view /camera/preview/compressed
@@ -222,7 +222,7 @@ Only the four settings of the exposure can change while the driver runs; the oth
 **The camera is never found.** Check that the host sees it:
 
 ```
-lsusb | grep Canon
+lsusb
 ```
 
 Then check, inside the container, that libgphoto2 can open it. Stop the driver first: only one program at a time can use the camera.
