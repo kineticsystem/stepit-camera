@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>stepit_camera_tests</name>
+  <version>0.1.0</version>
+  <description>
+    Tests of the camera driver: the settings, the driver's thread and the ROS2
+    node, run against a fake camera.
+  </description>
+  <maintainer email="lentigrams@gmail.com">developer</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>rclcpp</test_depend>
+  <test_depend>sensor_msgs</test_depend>
+  <test_depend>std_srvs</test_depend>
+  <test_depend>stepit_camera</test_depend>
+  <test_depend>stepit_camera_msgs</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

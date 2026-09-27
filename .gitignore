@@ -1,0 +1,23 @@
+# ROS
+build
+install
+log
+.cache
+
+# CMake
+compile_commands.json
+
+# VSCode
+.vscode
+
+# Python
+__pycache__
+*.egg-info
+
+# The pictures downloaded from the camera. The folder itself is kept, so that
+# Docker does not create it as root when it mounts the repo.
+pictures/*
+!pictures/.gitkeep
+
+# Local notes, not part of the project.
+task.md

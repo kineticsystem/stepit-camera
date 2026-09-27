@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>stepit_camera</name>
+  <version>0.1.0</version>
+  <description>
+    The driver of a camera connected over USB, through libgphoto2, e.g. a Canon
+    EOS 5D Mark II: it streams the live view, downloads each picture the camera
+    takes, and sets the exposure.
+  </description>
+  <maintainer email="lentigrams@gmail.com">developer</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
+
+  <depend>libgphoto-dev</depend>
+  <depend>libjpeg</depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>stepit_camera_msgs</depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

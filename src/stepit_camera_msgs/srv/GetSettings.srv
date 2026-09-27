@@ -1,0 +1,6 @@
+# Read the current settings of the camera, and the values each one accepts.
+---
+# False when the camera is not connected.
+bool success
+string message
+stepit_camera_msgs/Setting[] settings

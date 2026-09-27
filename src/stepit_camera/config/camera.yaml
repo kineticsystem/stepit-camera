@@ -1,0 +1,39 @@
+# Parameters of the camera driver. The wildcard '/**' makes them independent
+# of the name the node is launched with.
+/**:
+  ros__parameters:
+
+    # The frame of the images.
+    frame_id: "camera"
+
+    # Where to save the pictures the camera takes. The repo is mounted at ~/ws
+    # in the container, so they land in its `pictures` folder on the host.
+    # Empty not to save them: they are still published on ~/picture.
+    download_directory: "~/ws/pictures"
+
+    # Store each picture on the memory card, as well as downloading it. When
+    # false, the pictures only go to the camera's memory, and are deleted from
+    # it once downloaded: the card never fills up, but a picture that cannot be
+    # downloaded is lost.
+    keep_on_camera: true
+
+    # Start the live view as soon as the camera connects. Otherwise, call
+    # ~/start_streaming.
+    stream_on_start: false
+
+    # The frames of the live view per second, at most. The camera may deliver
+    # fewer.
+    preview_rate: 10.0
+
+    # How long to wait, in seconds, before trying to open the camera again
+    # when there is none, e.g. while it is off.
+    reconnect_period: 2.0
+
+    # The exposure, applied every time the camera connects. The values are
+    # those the camera shows, e.g. iso: "400", shutter_speed: "1/125",
+    # aperture: "8", exposure_compensation: "0". Empty leaves the camera as it
+    # is. Call ~/get_settings for the values the camera accepts.
+    iso: ""
+    shutter_speed: ""
+    aperture: ""
+    exposure_compensation: ""
