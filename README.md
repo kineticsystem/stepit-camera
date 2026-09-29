@@ -110,12 +110,14 @@ test
 
 ## Prepare the Camera
 
+> [!IMPORTANT]
+> **Set _Auto power off_ to _Off_ in the camera's menu.** Otherwise the camera goes to sleep, as soon as a minute after the last use, and the driver loses it until it wakes up: the live view stops, and no picture is downloaded.
+
 The driver can set the exposure only as far as the camera allows it. The modes below are named as on a Canon; Nikon and Sony call Av and Tv A and S.
 
 - Turn the mode dial to **M**. On most cameras the mode dial is mechanical and cannot be changed over USB. On M, we can set the ISO, the shutter speed and the aperture. On Av, only the aperture; on Tv, only the shutter speed.
 - Use a lens whose aperture the camera controls. A manual lens has no aperture setting.
 - Enable the live view for stills in the camera's menu, if it has such a setting. Without it, the camera may refuse to stream.
-- Set _Auto power off_ to _Off_. Otherwise the camera goes to sleep and the driver loses it until it wakes up.
 - Plug the external device into the remote shutter release socket, and the USB cable into the computer.
 
 ## Running the Application
