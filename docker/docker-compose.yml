@@ -1,0 +1,34 @@
+# Definition of the development container. Driven by ./dock.sh, which supplies
+# CONTAINER_NAME and USER_UID/USER_GID.
+#
+# The container only serves the page: the browser reaches the robot directly,
+# through rosbridge and web_video_server, so the container needs neither ROS
+# nor the host network.
+
+services:
+  dev:
+    build:
+      context: .
+      args:
+        # A uid/gid matching the host user keeps the bind-mounted workspace
+        # writable and correctly owned on the host.
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: ${CONTAINER_NAME:-stepit-macro}:latest
+    container_name: ${CONTAINER_NAME:-stepit-macro}
+    hostname: ${CONTAINER_NAME:-stepit-macro}
+    ports:
+      # The UI (serve.sh) and the Vite development server (dev.sh). The host
+      # ports differ from the StepIt Editor's, 8080 and 5173, so that both can
+      # run at once.
+      - "${MACRO_PORT:-8090}:8080"
+      - "${DEV_PORT:-5174}:5173"
+    volumes:
+      # Relative paths resolve against this file's directory, so this is the
+      # repo root whatever machine it is checked out on.
+      - ..:/home/developer/ws
+    environment:
+      # The host port, for the server to print the address to open.
+      MACRO_PORT: ${MACRO_PORT:-8090}
+    # Keep the container alive so shells can be attached to it on demand.
+    command: sleep infinity
