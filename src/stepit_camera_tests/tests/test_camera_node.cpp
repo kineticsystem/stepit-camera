@@ -198,7 +198,7 @@ TEST_F(CameraNodeTest, APictureIsPublishedAndSaved)
 {
   start();
 
-  const auto shot = call<Trigger>("simulate_shot");
+  const auto shot = call<Trigger>("take_picture");
   EXPECT_TRUE(shot->success);
 
   ASSERT_TRUE(waitUntil([this] { return pictures().size() == 1; }));
@@ -223,11 +223,13 @@ TEST_F(CameraNodeTest, TheExposureIsSetThroughParameters)
   // As `ros2 param set` sends them: numbers, not strings.
   EXPECT_TRUE(camera_->set_parameter(rclcpp::Parameter("aperture", 5.6)).successful);
   EXPECT_TRUE(camera_->set_parameter(rclcpp::Parameter("exposure_compensation", -1)).successful);
+  EXPECT_TRUE(camera_->set_parameter(rclcpp::Parameter("white_balance", "daylight")).successful);
 
   EXPECT_EQ(setting("iso"), "800");
   EXPECT_EQ(setting("shutter_speed"), "1/60");
   EXPECT_EQ(setting("aperture"), "5.6");
   EXPECT_EQ(setting("exposure_compensation"), "-1");
+  EXPECT_EQ(setting("white_balance"), "Daylight");
 }
 
 TEST_F(CameraNodeTest, AValueTheCameraDoesNotAcceptIsRejected)
@@ -260,12 +262,13 @@ TEST_F(CameraNodeTest, TheSettingsListTheirChoices)
   ASSERT_TRUE(waitUntil([this] { return call<GetSettings>("get_settings")->success; }));
 
   const auto response = call<GetSettings>("get_settings");
-  ASSERT_EQ(response->settings.size(), 4u);
+  ASSERT_EQ(response->settings.size(), 5u);
   EXPECT_EQ(response->settings[0].name, "iso");
   EXPECT_EQ(response->settings[0].choices.front(), "Auto");
   EXPECT_EQ(response->settings[1].name, "shutter_speed");
   EXPECT_EQ(response->settings[2].name, "aperture");
   EXPECT_EQ(response->settings[3].name, "exposure_compensation");
+  EXPECT_EQ(response->settings[4].name, "white_balance");
 }
 
 }  // namespace stepit_camera::test

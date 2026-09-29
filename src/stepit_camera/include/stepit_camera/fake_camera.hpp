@@ -39,7 +39,8 @@ namespace stepit_camera
  *
  * Its settings and their choices are those of a Canon EOS 5D Mark II on M.
  * The live view is a moving test pattern, and trigger() stands for the
- * external device firing the shutter.
+ * external device firing the shutter. Like the 5D Mark II, a shot during the
+ * live view breaks it: every frame fails until stopPreview() is called.
  *
  * Unlike a real camera, it is thread safe, so that a test or a ROS service
  * can trigger it while the driver's thread uses it.
@@ -65,12 +66,15 @@ public:
   std::vector<uint8_t> download(const CameraFile& file) override;
   void remove(const CameraFile& file) override;
 
+  /// @brief Take a JPEG picture. Like trigger(false).
+  void trigger() override;
+
   /**
    * @brief Take a picture, as the external device does by closing the
    * contact of the remote shutter release. With `raw` true, the camera stores
    * a CR2 file next to the JPEG, as with the RAW+JPEG quality.
    */
-  void trigger(bool raw = false);
+  void trigger(bool raw);
 
   /**
    * @brief Plug the camera in or out. While unplugged, open() fails and every
@@ -93,6 +97,8 @@ private:
   bool connected_ = true;
   bool open_ = false;
   bool previewing_ = false;
+  /// @brief A shot was taken during the live view: frames fail until stopPreview().
+  bool preview_lost_ = false;
   int frame_ = 0;
   int next_number_ = 1;
   std::map<std::string, std::string> settings_;

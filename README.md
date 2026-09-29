@@ -15,7 +15,7 @@
   - [Exposure](#exposure)
 - [Parameters](#parameters)
 - [Troubleshooting](#troubleshooting)
-- [Adding the Camera to the Workbench](#adding-the-camera-to-the-workbench)
+- [Running the Camera with the Whole Rig](#running-the-camera-with-the-whole-rig)
 
 ## Introduction
 
@@ -23,9 +23,9 @@ StepIt Camera is a ROS2 driver for a DSLR or mirrorless camera connected over US
 
 - it streams the live view of the camera, on request;
 - it downloads every picture the camera takes, saves it, and publishes it;
-- it sets the exposure: ISO, shutter speed, aperture and exposure compensation.
+- it sets the exposure: ISO, shutter speed, aperture and exposure compensation, and the white balance.
 
-The driver does not take pictures itself: an external precision device fires the camera through the remote shutter release cable. The driver notices each picture as soon as the camera reports it, and downloads it.
+The driver does not take pictures itself: an external precision device fires the camera through the remote shutter release cable. The driver notices each picture as soon as the camera reports it, and downloads it. The one exception is a test shot, which the driver fires over USB on request, e.g. from the [StepIt UI](https://github.com/kineticsystem/stepit-ui), to check the framing and the exposure.
 
 The camera is driven through [libgphoto2](http://www.gphoto.org/proj/libgphoto2/), so it works with the cameras that libgphoto2 [supports](http://www.gphoto.org/proj/libgphoto2/support.php) with _Liveview_ and _Configuration_, which includes most Canon EOS cameras. On Nikon and Sony cameras, libgphoto2 names the aperture `f-number` rather than `aperture`, so the driver cannot set their aperture yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it is built.
 
@@ -135,6 +135,13 @@ ros2 launch stepit_camera camera.launch.py
 
 Add `stream:=true` to start the live view as soon as the camera connects.
 
+The launch file also starts two servers for web pages, such as the [StepIt UI](https://github.com/kineticsystem/stepit-ui):
+
+- [web_video_server](https://github.com/RobotWebTools/web_video_server) on port 8081, which streams the live view to a browser, e.g. <http://localhost:8081/stream?topic=/camera/preview&type=ros_compressed>;
+- [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and receive the pictures. It is not on port 9090, which belongs to the rosbridge of StepIt Commander: only a rosbridge running next to this driver knows its messages, `stepit_camera_msgs`.
+
+Leave them out with `web_video:=false` and `rosbridge:=false`, or move them with `web_video_port:=<port>` and `rosbridge_port:=<port>`.
+
 Open a different terminal, attached to the same container with `./docker/dock.sh stepit-camera start`, to run the commands below.
 
 ### Streaming
@@ -162,11 +169,13 @@ Every picture the camera takes is downloaded straight away, saved into the folde
 ros2 topic echo /camera/picture --field path
 ```
 
-With the fake camera, take a picture as the external device would:
+Take a test shot, over USB. The picture comes like any other, on `/camera/picture`. This works with the fake camera too, which then takes a picture as the external device would:
 
 ```
-ros2 service call /camera/simulate_shot std_srvs/srv/Trigger
+ros2 service call /camera/take_picture std_srvs/srv/Trigger
 ```
+
+The live view pauses for the shot, for a second or so, and goes on by itself.
 
 A picture never overwrites another one: if a file of the same name already exists, e.g. because the camera started numbering from `IMG_0001` again, it gets a suffix, e.g. `IMG_0001_1.JPG`.
 
@@ -182,6 +191,7 @@ ros2 param set /camera iso 400
 ros2 param set /camera shutter_speed 1/125
 ros2 param set /camera aperture 5.6
 ros2 param set /camera exposure_compensation -0.3
+ros2 param set /camera white_balance Daylight
 ```
 
 A value the camera does not accept is rejected, with the values it does accept:
@@ -207,6 +217,7 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 | `shutter_speed` | `""` | The shutter speed, e.g. `1/125` or `2`. |
 | `aperture` | `""` | The aperture, e.g. `8` or `5.6`. |
 | `exposure_compensation` | `""` | The exposure compensation in stops, e.g. `-1` or `0.3`. It has no effect on M, unless the ISO is Auto. |
+| `white_balance` | `""` | The white balance, e.g. `Auto`, `Daylight` or `Cloudy`. |
 | `download_directory` | `~/ws/pictures` | Where to save the pictures. Empty not to save them. |
 | `keep_on_camera` | `true` | Store the pictures on the memory card too. When `false`, they only go to the camera's memory and are deleted once downloaded: the card never fills up, but a picture that cannot be downloaded is lost. |
 | `stream_on_start` | `false` | Start the live view as soon as the camera connects. Set by the launch argument `stream`. |
@@ -215,7 +226,16 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 | `frame_id` | `camera` | The frame of the images. |
 | `fake_camera` | `false` | Run a fake camera. Set by the launch argument `fake`. |
 
-Only the four settings of the exposure can change while the driver runs; the others are read once, at start.
+Only the five settings of the camera, from `iso` to `white_balance`, can change while the driver runs; the others are read once, at start.
+
+| Launch argument | Default | Description |
+|---|---|---|
+| `fake` | `false` | Run a fake camera. |
+| `stream` | `false` | Start the live view as soon as the camera connects. |
+| `web_video` | `true` | Start web_video_server, to show the live view in web pages. |
+| `web_video_port` | `8081` | The HTTP port of web_video_server. |
+| `rosbridge` | `true` | Start rosbridge, for web pages to use the driver. |
+| `rosbridge_port` | `9091` | The WebSocket port of rosbridge. |
 
 ## Troubleshooting
 
@@ -248,9 +268,15 @@ systemctl --user mask --now gvfs-gphoto2-volume-monitor.service
 
 **The live view does not start.** Check that it is enabled in the camera's menu, and look for warnings in the output of the driver.
 
-## Adding the Camera to the Workbench
+**The shutter button on the camera does nothing.** A 5D Mark II ignores its own shutter button while the live view runs over USB: stop the live view, or take a test shot. Whether it also ignores the remote shutter release cable during the live view is not tested yet.
 
-The container follows the other StepIt projects: its `dev` service in [`docker/docker-compose.yml`](docker/docker-compose.yml) can be extended by the [StepIt Workbench](https://github.com/kineticsystem/stepit-workbench), once this repo is a submodule under `modules/stepit-camera`:
+**The white balance offers a single value.** Right after connecting, a Canon EOS may not have sent the list of its white balances yet, and libgphoto2 then offers the current one only. Read the settings again a moment later.
+
+**The camera disconnects after a minute.** It switched itself off: set _Auto power off_ to _Off_ in the camera's menu.
+
+## Running the Camera with the Whole Rig
+
+The camera is a module of [StepIt Macro](https://github.com/kineticsystem/stepit-macro), which runs it together with the other parts of the focus stacking rig, under `modules/stepit-camera`. Its `stepit-camera` service extends the `dev` service of [`docker/docker-compose.yml`](docker/docker-compose.yml), so the Dockerfile, the mounts and the network settings stay defined here:
 
 ```yaml
   stepit-camera:
@@ -271,4 +297,4 @@ The container follows the other StepIt projects: its `dev` service in [`docker/d
         && exec ros2 launch stepit_camera camera.launch.py'
 ```
 
-Then add `stepit-camera` to `SERVICES` in the workbench's `dock.sh`.
+Run one or the other, not both: remove the container made by this repo's `dock.sh` before starting StepIt Macro, e.g. with `./docker/dock.sh stepit-camera clean`, and the other way round.

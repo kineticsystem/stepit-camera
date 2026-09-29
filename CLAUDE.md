@@ -31,7 +31,7 @@ colcon test --packages-select stepit_camera_tests --ctest-args -R test_camera_dr
 source install/setup.bash
 ros2 launch stepit_camera camera.launch.py fake:=true   # no hardware needed
 ros2 service call /camera/start_streaming std_srvs/srv/Trigger
-ros2 service call /camera/simulate_shot std_srvs/srv/Trigger
+ros2 service call /camera/take_picture std_srvs/srv/Trigger
 ros2 param set /camera iso 800
 
 pre-commit run -a  # in the container; on the host: SKIP=ament_copyright,ament_lint_cmake,ament_cpplint
@@ -49,8 +49,11 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
   on it. `CameraNode` keeps its own copy, `wanted_settings_`, for `onConnected`.
 - **Fatal vs non-fatal `CameraError`** decides whether the driver reconnects. Only lost
   connections are fatal; a refused value or a busy camera is not.
-- **The driver never triggers the camera**: an external device does. The driver watches
-  for the files the camera reports and downloads them.
+- **The driver does not trigger the camera**: an external device does. The driver watches
+  for the files the camera reports and downloads them. The one exception is the test shot,
+  `~/take_picture`, whose picture comes the same way.
+- **A shot during the live view breaks it** on a Canon EOS, until the viewfinder is switched
+  off and on: `CameraDriver::stream()` does that after a failed frame. `FakeCamera` mimics it.
 - `gphoto_camera.cpp` is the only file that includes libgphoto2, and it has no automated
   test: check it by hand with a real camera.
 - A new camera setting is one line in `SETTINGS` (`settings.hpp`) plus its choices in

@@ -130,15 +130,13 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
       create_service<std_srvs::srv::Trigger>("~/stop_streaming", std::bind(&CameraNode::stopStreaming, this, _1, _2));
   get_settings_service_ = create_service<stepit_camera_msgs::srv::GetSettings>(
       "~/get_settings", std::bind(&CameraNode::getSettings, this, _1, _2));
+  take_picture_service_ =
+      create_service<std_srvs::srv::Trigger>("~/take_picture", std::bind(&CameraNode::takePicture, this, _1, _2));
 
   std::unique_ptr<Camera> camera;
   if (fake_camera)
   {
-    auto fake = std::make_unique<FakeCamera>();
-    fake_camera_ = fake.get();
-    camera = std::move(fake);
-    simulate_shot_service_ =
-        create_service<std_srvs::srv::Trigger>("~/simulate_shot", std::bind(&CameraNode::simulateShot, this, _1, _2));
+    camera = std::make_unique<FakeCamera>();
     RCLCPP_INFO(get_logger(), "Running a fake camera");
   }
   else
@@ -361,12 +359,20 @@ void CameraNode::getSettings(const std::shared_ptr<stepit_camera_msgs::srv::GetS
   }
 }
 
-void CameraNode::simulateShot(const std::shared_ptr<std_srvs::srv::Trigger::Request>,
-                              std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+void CameraNode::takePicture(const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+                             std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-  fake_camera_->trigger();
-  response->success = true;
-  response->message = "Picture taken";
+  try
+  {
+    driver_->run([](Camera& camera) { camera.trigger(); });
+    response->success = true;
+    response->message = "Shutter released";
+  }
+  catch (const CameraError& error)
+  {
+    response->success = false;
+    response->message = error.what();
+  }
 }
 
 }  // namespace stepit_camera

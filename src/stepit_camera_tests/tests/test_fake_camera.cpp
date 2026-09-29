@@ -163,4 +163,17 @@ TEST(FakeCamera, UnpluggedItFailsFatally)
   EXPECT_NO_THROW(camera.open());
 }
 
+TEST(FakeCamera, AShotBreaksTheLiveViewUntilItIsSwitchedOff)
+{
+  FakeCamera camera;
+  camera.open();
+  camera.capturePreview();
+
+  camera.trigger();
+
+  EXPECT_THROW(camera.capturePreview(), CameraError);
+  camera.stopPreview();
+  EXPECT_FALSE(camera.capturePreview().empty());
+}
+
 }  // namespace stepit_camera::test
