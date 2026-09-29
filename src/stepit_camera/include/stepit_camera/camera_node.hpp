@@ -50,11 +50,11 @@ namespace stepit_camera
  * - `~/start_streaming`, `~/stop_streaming` (std_srvs/Trigger): the live view.
  * - `~/get_settings` (stepit_camera_msgs/GetSettings): the current settings
  *   and the values they accept.
- * - `~/simulate_shot` (std_srvs/Trigger), with the fake camera only: take a
- *   picture, as the external trigger would.
+ * - `~/take_picture` (std_srvs/Trigger): release the shutter over USB, for a
+ *   test shot. The picture comes on `~/picture`, like any other.
  *
  * The exposure is set through the parameters `iso`, `shutter_speed`,
- * `aperture` and `exposure_compensation`. A value the camera does not accept
+ * `aperture`, `exposure_compensation` and `white_balance`. A value the camera does not accept
  * is rejected, with the values it does accept in the reason.
  */
 class CameraNode : public rclcpp::Node
@@ -80,8 +80,8 @@ private:
                      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void getSettings(const std::shared_ptr<stepit_camera_msgs::srv::GetSettings::Request> request,
                    std::shared_ptr<stepit_camera_msgs::srv::GetSettings::Response> response);
-  void simulateShot(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-                    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void takePicture(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+                   std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
   std::string frame_id_;
   std::string download_directory_;
@@ -96,11 +96,8 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service_;
   rclcpp::Service<stepit_camera_msgs::srv::GetSettings>::SharedPtr get_settings_service_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr simulate_shot_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr take_picture_service_;
   OnSetParametersCallbackHandle::SharedPtr parameters_callback_;
-
-  /// @brief The fake camera, if the driver runs one. Owned by the driver.
-  FakeCamera* fake_camera_ = nullptr;
 
   /// @brief Last, so that its thread stops before anything it calls back is destroyed.
   std::unique_ptr<CameraDriver> driver_;

@@ -29,7 +29,7 @@ It follows one idea: **the camera is a device that answers one request at a time
 
 ## The Big Picture
 
-The camera is fired by an external precision device, through the remote shutter release cable. The driver never takes a picture itself: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings.
+The camera is fired by an external precision device, through the remote shutter release cable. The driver does not take the pictures itself: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings. The one exception is a test shot, `~/take_picture`, which releases the shutter over USB to check the framing and the exposure.
 
 ```mermaid
 ---
@@ -50,8 +50,12 @@ flowchart LR
         Driver --> ROS["CameraNode<br/>topics, services, parameters"]
     end
     ROS -- "preview/compressed<br/>picture" --> Clients["Other nodes<br/>rqt_image_view"]
-    Clients -- "start_streaming, stop_streaming<br/>get_settings, parameters" --> ROS
+    Clients -- "start_streaming, stop_streaming<br/>get_settings, take_picture, parameters" --> ROS
     ROS -- "saves" --> Folder["pictures/"]
+    ROS -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
+    ROS <--> Bridge["rosbridge<br/>port 9091"]
+    Video --> Browser["Web pages<br/>StepIt UI"]
+    Bridge <--> Browser
 ```
 
 The node's interface:
@@ -62,8 +66,10 @@ The node's interface:
 | `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, with its content and where it was saved. |
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
-| `~/simulate_shot` | `std_srvs/Trigger` service | With the fake camera only: take a picture. |
-| `iso`, `shutter_speed`, `aperture`, `exposure_compensation` | parameters | The exposure. |
+| `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
+| `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
+
+The launch file also starts, for web pages, [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, rather than the one of StepIt Commander on port 9090, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only.
 
 ## The Packages
 
@@ -123,14 +129,16 @@ The settings are named as libgphoto2 names them, e.g. `shutterspeed`, which is w
 A few details that matter on a Canon EOS:
 
 - **The live view** starts with the first `gp_camera_capture_preview`, and only stops when the setting `viewfinder` is switched off. `stopPreview()` does that, so that the mirror goes down again.
+- **A shot during the live view** stops it, although `viewfinder` still reads on: every frame fails until `viewfinder` is switched off and on again. The driver does that, see [Losing the Camera](#losing-the-camera).
+- **A test shot** is `gp_camera_trigger_capture`, which presses and releases the shutter button remotely, and works during the live view. The shutter button on the body of a 5D Mark II, on the other hand, does nothing while the live view runs over USB.
 - **The events.** The camera reports a stream of events, most of them about properties that changed. `waitForFiles()` keeps reading them until a file is added or the time is up, then collects whatever else is already queued, because RAW+JPEG adds two files for one shot.
 - **The fatal errors** are the errors of the USB port (`GP_ERROR_IO` and `GP_ERROR_IO_*`) and the camera no longer being found. A camera busy writing a picture to the card (`GP_ERROR_CAMERA_BUSY`) is not fatal.
 
 ### FakeCamera
 
-[`fake_camera.cpp`](../src/stepit_camera/src/fake_camera.cpp) is a camera that exists only in memory, with the settings and the choices of a 5D Mark II on M. Its live view is a moving test pattern, encoded with libjpeg, and `trigger()` stands for the external device firing the shutter. `setConnected(false)` unplugs it, to test the reconnection.
+[`fake_camera.cpp`](../src/stepit_camera/src/fake_camera.cpp) is a camera that exists only in memory, with the settings and the choices of a 5D Mark II on M. Its live view is a moving test pattern, encoded with libjpeg, and `trigger()` stands for the external device firing the shutter. Like a 5D Mark II, a shot during the live view breaks it until `stopPreview()`. `setConnected(false)` unplugs it, to test the reconnection.
 
-It runs in the tests, and in the node with the parameter `fake_camera`, where the service `~/simulate_shot` calls `trigger()`. Unlike a real camera, it is thread safe, so that a test can trigger it while the driver's thread waits for its pictures.
+It runs in the tests, and in the node with the parameter `fake_camera`, where the service `~/take_picture` calls `trigger()`, as it does on a real camera. Unlike a real camera, it is thread safe, so that a test can trigger it while the driver's thread waits for its pictures.
 
 ### CameraDriver
 
@@ -226,7 +234,7 @@ The node saves a picture under its name on the camera, and never overwrites a fi
 
 ## The Exposure
 
-The exposure is four ROS parameters. The table `SETTINGS` in [`settings.hpp`](../src/stepit_camera/include/stepit_camera/settings.hpp) maps each one to its libgphoto2 setting:
+The settings are five ROS parameters. The table `SETTINGS` in [`settings.hpp`](../src/stepit_camera/include/stepit_camera/settings.hpp) maps each one to its libgphoto2 setting:
 
 | Parameter | libgphoto2 setting |
 |---|---|
@@ -234,6 +242,7 @@ The exposure is four ROS parameters. The table `SETTINGS` in [`settings.hpp`](..
 | `shutter_speed` | `shutterspeed` |
 | `aperture` | `aperture` |
 | `exposure_compensation` | `exposurecompensation` |
+| `white_balance` | `whitebalance` |
 
 A new value goes through the node's `on_set_parameters` callback. When the camera is connected, the callback runs a task that matches the value to the camera's choices, sets it, and returns. If the camera refuses it, the callback rejects the parameter, and the reason lists the choices. When the camera is not connected, the value is only remembered.
 
@@ -254,7 +263,7 @@ The camera goes away all the time in practice: it is switched off, it goes to sl
 
 - A **fatal** error closes the camera, drops the queued tasks, so that their callers get a `CameraError` instead of waiting, and reports `on_disconnected`. The loop then tries to open the camera again every `reconnect_period`, and configures it again when it comes back.
 - A **non-fatal** error is reported as a warning, and the loop carries on.
-- A **frame** that fails is not fatal on its own, because the camera is busy for a moment after each shot, while it writes the picture. Only `max_preview_failures` (5) failures in a row count as a lost connection.
+- A **frame** that fails is not fatal on its own, because the camera is busy for a moment after each shot, while it writes the picture. Only `max_preview_failures` (5) failures in a row count as a lost connection. After a failed frame, the driver switches the live view off, so that the next frame starts it again: a Canon EOS does not start it again by itself after a shot.
 
 Streaming survives a disconnection: the flag stays on, and the live view starts again on its own when the camera comes back.
 
@@ -297,7 +306,7 @@ The tests run against the fake camera, so they need no hardware:
 
 **The frames are not decoded.** The camera already sends JPEG images, so publishing them as they come costs nothing. A node that needs raw pixels can subscribe through `image_transport`, which decodes them.
 
-**The driver does not trigger the camera.** The external device fires it with a precision that a USB command cannot match. The driver only watches for the pictures, which is also why the stamp of a picture is the time of its download, not of the shot.
+**The driver does not trigger the camera.** The external device fires it with a precision that a USB command cannot match. The driver only watches for the pictures, which is also why the stamp of a picture is the time of its download, not of the shot. A test shot is the one exception: it only checks the framing and the exposure, so its timing does not matter, and its picture comes the same way as the others.
 
 **Parameters for the exposure, services for the live view.** A setting is a state, which `ros2 param`, `rqt_reconfigure` and launch files already know how to set, save and restore. Starting the live view is an action, which a service expresses better, and it returns at once.
 

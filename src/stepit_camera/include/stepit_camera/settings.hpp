@@ -42,12 +42,13 @@ struct Setting
 };
 
 /// @brief The settings of the exposure, in the order they are applied.
-constexpr std::array<Setting, 4> SETTINGS = { {
+constexpr std::array<Setting, 5> SETTINGS = { {
     { "iso", "iso", "The ISO, e.g. 400 or Auto." },
     { "shutter_speed", "shutterspeed", "The shutter speed, e.g. 1/125 or 2. Needs the mode dial on M or Tv." },
     { "aperture", "aperture", "The aperture, e.g. 8 or 5.6. Needs the mode dial on M or Av." },
     { "exposure_compensation", "exposurecompensation",
       "The exposure compensation in stops, e.g. -1 or 0.3. Has no effect on M, unless the ISO is Auto." },
+    { "white_balance", "whitebalance", "The white balance, e.g. Auto or Daylight." },
 } };
 
 /// @brief The libgphoto2 setting that tells the camera where to store a picture.

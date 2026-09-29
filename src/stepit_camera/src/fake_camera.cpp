@@ -113,14 +113,14 @@ FakeCamera::FakeCamera()
     { "aperture", { "4", "4.5", "5", "5.6", "6.3", "7.1", "8", "9", "10", "11", "13", "14", "16", "18", "20", "22" } },
     { "exposurecompensation",
       { "-2", "-1.6", "-1.3", "-1", "-0.6", "-0.3", "0", "0.3", "0.6", "1", "1.3", "1.6", "2" } },
+    { "whitebalance",
+      { "Auto", "Daylight", "Shadow", "Cloudy", "Tungsten", "Fluorescent", "Flash", "Manual", "Color Temperature" } },
     { "capturetarget", { "Internal RAM", "Memory card" } },
   };
   settings_ = {
-    { "iso", "400" },
-    { "shutterspeed", "1/125" },
-    { "aperture", "8" },
-    { "exposurecompensation", "0" },
-    { "capturetarget", "Internal RAM" },
+    { "iso", "400" },           { "shutterspeed", "1/125" },
+    { "aperture", "8" },        { "exposurecompensation", "0" },
+    { "whitebalance", "Auto" }, { "capturetarget", "Internal RAM" },
   };
 }
 
@@ -166,6 +166,10 @@ std::vector<uint8_t> FakeCamera::capturePreview()
   {
     std::lock_guard<std::mutex> lock(mutex_);
     checkOpen();
+    if (preview_lost_)
+    {
+      throw CameraError("Cannot capture a frame of the live view: Unspecified error");
+    }
     previewing_ = true;
     frame = frame_++;
   }
@@ -177,6 +181,7 @@ void FakeCamera::stopPreview()
   std::lock_guard<std::mutex> lock(mutex_);
   checkOpen();
   previewing_ = false;
+  preview_lost_ = false;
 }
 
 std::string FakeCamera::getSetting(const std::string& name)
@@ -252,6 +257,11 @@ void FakeCamera::remove(const CameraFile& file)
   }
 }
 
+void FakeCamera::trigger()
+{
+  trigger(false);
+}
+
 void FakeCamera::trigger(bool raw)
 {
   int number = 0;
@@ -274,6 +284,7 @@ void FakeCamera::trigger(bool raw)
   }
   files_[stem.str() + ".JPG"] = jpeg;
   new_files_.push_back(CameraFile{ FOLDER, stem.str() + ".JPG" });
+  preview_lost_ = previewing_;
   files_added_.notify_all();
 }
 

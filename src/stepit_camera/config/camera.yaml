@@ -29,11 +29,13 @@
     # when there is none, e.g. while it is off.
     reconnect_period: 2.0
 
-    # The exposure, applied every time the camera connects. The values are
-    # those the camera shows, e.g. iso: "400", shutter_speed: "1/125",
-    # aperture: "8", exposure_compensation: "0". Empty leaves the camera as it
-    # is. Call ~/get_settings for the values the camera accepts.
+    # The settings of the camera, applied every time it connects. The values
+    # are those the camera shows, e.g. iso: "400", shutter_speed: "1/125",
+    # aperture: "8", exposure_compensation: "0", white_balance: "Daylight".
+    # Empty leaves the camera as it is. Call ~/get_settings for the values the
+    # camera accepts.
     iso: ""
     shutter_speed: ""
     aperture: ""
     exposure_compensation: ""
+    white_balance: ""

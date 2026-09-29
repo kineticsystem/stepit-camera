@@ -66,8 +66,10 @@ struct DriverOptions
  *    and download them.
  *
  * The camera is triggered by an external device, not by the driver: the
- * driver only notices the pictures it takes. The results are handed over
- * through callbacks, which run on the driver's thread.
+ * driver only notices the pictures it takes. A test shot, run() with
+ * Camera::trigger(), is the one exception, and its pictures come the same way.
+ * The results are handed over through callbacks, which run on the driver's
+ * thread.
  */
 class CameraDriver
 {

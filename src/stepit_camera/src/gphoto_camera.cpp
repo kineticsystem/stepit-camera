@@ -257,6 +257,14 @@ void GPhotoCamera::setSetting(const std::string& name, const std::string& value)
         "Cannot set " + name + " to " + value);
 }
 
+void GPhotoCamera::trigger()
+{
+  // On a Canon EOS, this presses and releases the shutter button remotely. It
+  // works during the live view too, which lowers the mirror for the shot and
+  // raises it again.
+  check(gp_camera_trigger_capture(camera_, context_), "Cannot release the shutter");
+}
+
 std::vector<CameraFile> GPhotoCamera::waitForFiles(std::chrono::milliseconds timeout)
 {
   using Clock = std::chrono::steady_clock;

@@ -79,6 +79,10 @@ public:
   {
     camera_->setSetting(name, value);
   }
+  void trigger() override
+  {
+    camera_->trigger();
+  }
   std::vector<CameraFile> waitForFiles(std::chrono::milliseconds timeout) override
   {
     return camera_->waitForFiles(timeout);
@@ -198,6 +202,22 @@ TEST_F(CameraDriverTest, PicturesAreDownloadedWhileStreaming)
   ASSERT_TRUE(waitUntil([this] { return pictures().size() == 1; }));
   const int frames = frames_;
   ASSERT_TRUE(waitUntil([this, frames] { return frames_ > frames + 2; }));
+}
+
+TEST_F(CameraDriverTest, ATestShotIsDownloadedLikeAnyPicture)
+{
+  start();
+  driver_->setStreaming(true);
+  ASSERT_TRUE(waitUntil([this] { return frames_ >= 2; }));
+
+  driver_->run([](Camera& camera) { camera.trigger(); });
+
+  ASSERT_TRUE(waitUntil([this] { return pictures().size() == 1; }));
+  EXPECT_EQ(pictures()[0], "IMG_0001.JPG");
+  // The shot broke the live view: the driver starts it again.
+  const int frames = frames_;
+  ASSERT_TRUE(waitUntil([this, frames] { return frames_ > frames + 2; }));
+  EXPECT_EQ(disconnections_, 0);
 }
 
 TEST_F(CameraDriverTest, DownloadedPicturesCanBeDeletedFromTheCamera)

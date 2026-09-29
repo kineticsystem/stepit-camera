@@ -238,6 +238,11 @@ void CameraDriver::stream(Clock::time_point now)
       throw CameraError(error.what(), true);
     }
     warn(error.what());
+    // A Canon EOS stops its live view for a shot and does not start it again,
+    // although it still reports it on: every frame fails from then on. Switch
+    // the live view off, for the next frame to start it again.
+    previewing_ = false;
+    camera_->stopPreview();
     return;
   }
   if (callbacks_.on_preview)

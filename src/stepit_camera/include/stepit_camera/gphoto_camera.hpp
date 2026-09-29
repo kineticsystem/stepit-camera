@@ -64,6 +64,7 @@ public:
   std::vector<std::string> getChoices(const std::string& name) override;
   void setSetting(const std::string& name, const std::string& value) override;
 
+  void trigger() override;
   std::vector<CameraFile> waitForFiles(std::chrono::milliseconds timeout) override;
   std::vector<uint8_t> download(const CameraFile& file) override;
   void remove(const CameraFile& file) override;

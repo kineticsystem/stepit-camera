@@ -114,6 +114,13 @@ public:
   virtual void setSetting(const std::string& name, const std::string& value) = 0;
 
   /**
+   * @brief Release the shutter, as the remote shutter release does. Returns at
+   * once: the pictures are reported by waitForFiles() when the camera has
+   * stored them.
+   */
+  virtual void trigger() = 0;
+
+  /**
    * @brief Wait for the camera to report new files, i.e. that a picture was
    * taken, for at most the given time.
    *
