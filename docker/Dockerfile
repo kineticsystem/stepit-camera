@@ -4,9 +4,9 @@
 # robot through rosbridge and web_video_server, which run next to the ROS
 # nodes.
 
-FROM ubuntu:24.04 AS macro
+FROM ubuntu:24.04 AS ui
 
-LABEL name="develop:stepit-macro"
+LABEL name="develop:stepit-ui"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -69,7 +69,7 @@ ENV PATH="/home/developer/ws/bin:${PATH}"
 # file, which is versioned in the repo instead of being echoed line by line
 # into ~/.bashrc. Source it from the stock ~/.bashrc rather than replacing that
 # file, to keep the distribution's own settings.
-COPY --chown=developer:developer bashrc /home/developer/.bashrc.macro
-RUN echo "source ~/.bashrc.macro" >> ~/.bashrc
+COPY --chown=developer:developer bashrc /home/developer/.bashrc.ui
+RUN echo "source ~/.bashrc.ui" >> ~/.bashrc
 
 WORKDIR /home/developer/ws

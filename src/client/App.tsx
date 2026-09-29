@@ -47,7 +47,7 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">StepIt Macro</span>
+        <span className="brand">StepIt</span>
         <nav className="sections">
           {SECTIONS.map((s) => (
             <button key={s.id} className={s.id === current.id ? 'section active' : 'section'} onClick={() => open(s.id)}>

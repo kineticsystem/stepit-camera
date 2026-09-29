@@ -1,4 +1,4 @@
-# StepIt Macro
+# StepIt UI
 
 > [!WARNING]
 > This project is a work in progress and not fully implemented yet. Today it only controls the camera: the rail, the rotary stage and the lights are still to come.
@@ -18,7 +18,7 @@ is consistent and synchronized with each capture.
 - [Features](#features)
 - [The Control Panel](#the-control-panel)
 - [Prerequisites](#prerequisites)
-- [Install the StepIt Macro](#install-the-stepit-macro)
+- [Install the StepIt UI](#install-the-stepit-ui)
   - [Check out the Git Repository](#check-out-the-git-repository)
   - [Build the Project](#build-the-project)
 - [Running the Application](#running-the-application)
@@ -60,12 +60,12 @@ If you want to run the UI on your host machine instead, you must install [Node.j
 
 To see and control a camera, [StepIt Camera](https://github.com/kineticsystem/stepit-camera) must run, with a real camera or its fake one.
 
-## Install the StepIt Macro
+## Install the StepIt UI
 
 ### Check out the Git Repository
 
 ```
-git clone git@github.com:kineticsystem/stepit-macro.git
+git clone git@github.com:kineticsystem/stepit-ui.git
 ```
 
 ### Build the Project
@@ -78,13 +78,13 @@ The Docker container is defined in [`docker/docker-compose.yml`](docker/docker-c
 Build the image and create the container:
 
 ```
-./docker/dock.sh stepit-macro build
+./docker/dock.sh stepit-ui build
 ```
 
 Start the container with an interactive shell:
 
 ```
-./docker/dock.sh stepit-macro start
+./docker/dock.sh stepit-ui start
 ```
 
 Inside the container the scripts in [`bin`](bin) are on the `PATH` and aliased, so they can be called from any directory. Outside the container, call them by their path instead, e.g. `./bin/update.sh`.
@@ -124,10 +124,10 @@ serve
 From outside the container, the same can be done in one step: this starts the container, installs the dependencies, builds and serves the UI. Stop it with `Ctrl+C`.
 
 ```
-./docker/dock.sh stepit-macro serve
+./docker/dock.sh stepit-ui serve
 ```
 
-To use another port, choose it when starting the container, e.g. `MACRO_PORT=9000 ./docker/dock.sh stepit-macro serve`. For working on the UI itself, `dev` runs the Vite development server with hot reload, on <http://localhost:5174>.
+To use another port, choose it when starting the container, e.g. `UI_PORT=9000 ./docker/dock.sh stepit-ui serve`. For working on the UI itself, `dev` runs the Vite development server with hot reload, on <http://localhost:5174>.
 
 > [!IMPORTANT]
 > The server listens on all network interfaces, so anyone on the network can open it, and control the camera.

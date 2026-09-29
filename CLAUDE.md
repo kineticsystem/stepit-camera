@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Everything is built, tested and run **inside the Docker container**, never on the host.
 
 ```bash
-./docker/dock.sh stepit-macro build   # create image + container (also picks up Dockerfile changes)
-./docker/dock.sh stepit-macro start   # start it and open a shell
-./docker/dock.sh stepit-macro serve   # or: install, build and serve on http://localhost:8090
+./docker/dock.sh stepit-ui build   # create image + container (also picks up Dockerfile changes)
+./docker/dock.sh stepit-ui start   # start it and open a shell
+./docker/dock.sh stepit-ui serve   # or: install, build and serve on http://localhost:8090
 ```
 
 The repo is bind-mounted at `~/ws`. `~/ws/bin` is on the `PATH` and `docker/bashrc` defines the

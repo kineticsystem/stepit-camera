@@ -35,16 +35,16 @@ const server = createServer((req, res) => {
   res.setHeader('Content-Type', TYPES[extname(file)] ?? 'application/octet-stream');
   createReadStream(file).pipe(res);
 }).listen(PORT, HOST, () => {
-  // In the container, MACRO_PORT is the host port that docker publishes as the
+  // In the container, UI_PORT is the host port that docker publishes as the
   // container's port 8080: any other port is unreachable from the host.
-  const published = process.env.MACRO_PORT;
+  const published = process.env.UI_PORT;
   if (!published) {
-    console.log(`StepIt Macro on http://localhost:${PORT}`);
+    console.log(`StepIt UI on http://localhost:${PORT}`);
   } else if (PORT === 8080) {
-    console.log(`StepIt Macro on http://localhost:${published}`);
+    console.log(`StepIt UI on http://localhost:${published}`);
   } else {
     console.warn(`Listening on port ${PORT} of the container, which docker does not publish.`);
-    console.warn('To change the port, start the container with MACRO_PORT=<port> ./docker/dock.sh ...');
+    console.warn('To change the port, start the container with UI_PORT=<port> ./docker/dock.sh ...');
   }
 });
 

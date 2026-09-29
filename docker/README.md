@@ -41,7 +41,7 @@ Or start the container with an interactive shell:
 ./docker/dock.sh [container-name] start
 ```
 
-Set `MACRO_PORT` (default 8090) or `DEV_PORT` (default 5174) to publish the UI on
+Set `UI_PORT` (default 8090) or `DEV_PORT` (default 5174) to publish the UI on
 other host ports. They differ from the StepIt Editor's, 8080 and 5173, so that
 both can run at once.
 
@@ -65,7 +65,7 @@ Inside the container, the repo is bind-mounted at `~/ws`. `~/ws/bin` is on the
 ```bash
 update      # pnpm install
 build       # type-check and bundle the UI into dist/
-serve       # serve dist/ on port 8080, published on the host's MACRO_PORT
+serve       # serve dist/ on port 8080, published on the host's UI_PORT
 dev         # or: the Vite development server with hot reload, on DEV_PORT
 test        # type-check and run the unit tests
 ```
@@ -74,5 +74,5 @@ From a non-interactive shell (e.g. `docker exec [container-name] build.sh`),
 call the scripts by their full names: `update.sh`, `build.sh`, and so on.
 
 The interactive shell setup -- the aliases -- lives in `docker/bashrc`, which
-the image installs as `~/.bashrc.macro`. Variables belong in the `Dockerfile` as
+the image installs as `~/.bashrc.ui`. Variables belong in the `Dockerfile` as
 `ENV` instead, so that they apply to non-interactive commands too.

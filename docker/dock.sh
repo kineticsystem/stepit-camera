@@ -1,7 +1,7 @@
 #! /bin/bash -e
 
 # Use this script to create, start, stop and remove the docker container that
-# builds and runs the StepIt Macro.
+# builds and runs the StepIt UI.
 #
 # The container itself is defined in docker-compose.yml. This script only adds
 # what compose cannot express: the host uid/gid and the container name passed
@@ -35,7 +35,7 @@ function display_usage() {
     start   Start the container and open an interactive terminal
             Usage: ./dock.sh container-name start
     serve   Start the container, install, build and run the UI
-            on http://localhost:\${MACRO_PORT:-8090}
+            on http://localhost:\${UI_PORT:-8090}
             Usage: ./dock.sh container-name serve
     stop    Stop the container
             Usage: ./dock.sh container-name stop
@@ -97,7 +97,7 @@ case "$command" in
         up $name
         docker exec $name update.sh
         docker exec $name build.sh
-        echo "Starting the UI on http://localhost:${MACRO_PORT:-8090}"
+        echo "Starting the UI on http://localhost:${UI_PORT:-8090}"
         docker exec -it $name serve.sh
         ;;
     stop)

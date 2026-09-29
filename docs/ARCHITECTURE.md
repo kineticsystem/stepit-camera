@@ -1,4 +1,4 @@
-# StepIt Macro Architecture
+# StepIt UI Architecture
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -18,7 +18,7 @@
 
 ## Introduction
 
-This document explains how the StepIt Macro is built, and where to start when we want to change something. It assumes we have read the [README](../README.md) and used the UI once.
+This document explains how the StepIt UI is built, and where to start when we want to change something. It assumes we have read the [README](../README.md) and used the UI once.
 
 ## The Big Picture
 

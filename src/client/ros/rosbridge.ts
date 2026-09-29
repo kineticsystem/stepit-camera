@@ -47,7 +47,7 @@ export interface RosbridgeOptions {
 }
 
 let nextId = 0;
-const uniqueId = (what: string) => `stepit-macro-${what}-${Date.now()}-${nextId++}`;
+const uniqueId = (what: string) => `stepit-ui-${what}-${Date.now()}-${nextId++}`;
 
 export class Rosbridge {
   readonly url: string;
