@@ -1,8 +1,22 @@
 # StepIt Macro
 
+> [!WARNING]
+> This project is a work in progress and not fully implemented yet. Today it only controls the camera: the rail, the rotary stage and the lights are still to come.
+
+An automated macro photography system for 3D focus stacking.
+
+A camera is mounted on a motorized linear rail, which sits on a rotary stage.
+For each angle, the rail moves the camera through a series of focus distances
+and captures an image at each step. The stage then rotates to the next angle
+and repeats, producing a full set of focus stacks around the subject.
+
+The system also switches LED lights on and off during the shoot, so lighting
+is consistent and synchronized with each capture.
+
 ## Table of Contents <!-- omit in toc -->
 
-- [Introduction](#introduction)
+- [Features](#features)
+- [The Control Panel](#the-control-panel)
 - [Prerequisites](#prerequisites)
 - [Install the StepIt Macro](#install-the-stepit-macro)
   - [Check out the Git Repository](#check-out-the-git-repository)
@@ -14,17 +28,24 @@
 - [Troubleshooting](#troubleshooting)
 - [Project Layout](#project-layout)
 
-## Introduction
+## Features
 
-The StepIt Macro is the web control panel of the StepIt robot. It has one section per part of the robot. Today there is one, the **Camera**:
+- Automated focus stacking along a linear rail
+- Multi-angle capture via rotary stage
+- Synchronized LED lighting control
+- Output suitable for focus-stack merging and 3D reconstruction
+
+## The Control Panel
+
+This repository holds the web control panel of the system. It has one section per part of the rig. Today there is one, the **Camera**:
 
 - it shows what the camera sees, live;
 - it sets the ISO, the shutter speed, the aperture and the white balance;
 - it takes a test shot, and shows it.
 
-The macro rails, driven through [StepIt Commander](https://github.com/kineticsystem/stepit-commander), will come as another section.
+The rail and the rotary stage, driven through [StepIt Commander](https://github.com/kineticsystem/stepit-commander), and the lights will come as other sections.
 
-The UI talks to the robot straight from the browser, so it needs no ROS itself:
+The UI talks to the rig straight from the browser, so it needs no ROS itself:
 
 - through [rosbridge](https://github.com/RobotWebTools/rosbridge_suite), a WebSocket that speaks JSON, to call the services, set the parameters and receive the pictures;
 - through [web_video_server](https://github.com/RobotWebTools/web_video_server), which streams the live view as MJPEG into a plain `<img>`.
