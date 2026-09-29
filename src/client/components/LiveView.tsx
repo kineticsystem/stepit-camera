@@ -50,7 +50,6 @@ export function LiveView() {
         {streaming && !failed && (
           <img key={`${src}#${attempt}`} src={src} alt="What the camera sees" onError={() => setFailed(true)} />
         )}
-        {shooting && streaming && !overlay && <div className="viewport-badge">Taking a picture: the live view is paused</div>}
         {overlay && (
           <div className="viewport-message">
             <p>{overlay}</p>

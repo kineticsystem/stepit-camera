@@ -174,11 +174,6 @@ textarea { resize: vertical; }
 /* During a shot: the last frame, greyed out, until the live view comes back. */
 .viewport img { transition: filter 0.2s; }
 .viewport.paused img { filter: grayscale(1) brightness(0.55); }
-.viewport-badge {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  padding: 4px 12px; border-radius: 999px;
-  background: rgb(0 0 0 / 0.6); color: #fff; white-space: nowrap;
-}
 .viewport-message {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
