@@ -5,8 +5,8 @@ import { create } from 'zustand';
 import { disconnect, onConnected, rosbridge, statusOf } from '../ros/connection';
 import { errorMessage } from '../ros/rosbridge';
 import { cameraRosbridgeUrl, useSettings } from '../settings';
-import { Camera, type CameraSetting, type Picture } from './camera';
-import { rawPreview } from './raw';
+import { Camera, type CameraSetting } from './camera';
+import { loadPicture } from './picture';
 
 /** How often the settings are read again, to follow changes made on the camera itself. */
 const REFRESH_PERIOD = 3000;
@@ -24,11 +24,16 @@ export interface Shot {
 export interface ShotPicture {
   name: string;
   path: string;
-  size: number;
-  /** An object URL of the picture, if the browser can show it: a JPEG, or the preview inside a RAW. */
+  /** The file on the camera's web server. */
+  file: string;
+  /** The size of the file, once loaded. */
+  size?: number;
+  /** What the browser can show, if it can: the JPEG itself, or an object URL of the preview inside a RAW. */
   url?: string;
   /** The URL shows the preview inside a RAW, not the picture itself. */
   preview?: boolean;
+  /** Why the picture cannot be loaded. */
+  error?: string;
 }
 
 interface CameraState {
@@ -50,6 +55,8 @@ interface CameraState {
 }
 
 const camera = () => new Camera(rosbridge(cameraRosbridgeUrl(useSettings.getState())), useSettings.getState().cameraNode);
+/** The number of the last test shot: a picture that loads after the next shot started is dropped. */
+let shots = 0;
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const useCamera = create<CameraState>((set, get) => ({
@@ -90,7 +97,8 @@ export const useCamera = create<CameraState>((set, get) => ({
 
   async takeShot() {
     const previous = get().shot;
-    previous?.pictures.forEach((p) => p.url && URL.revokeObjectURL(p.url));
+    previous?.pictures.forEach((p) => p.url?.startsWith('blob:') && URL.revokeObjectURL(p.url));
+    const shot = ++shots;
     const pictures: ShotPicture[] = [];
     const update = (change: Partial<Shot>) => set((s) => ({ shot: { ...s.shot!, ...change, pictures: [...pictures] } }));
     set({ shot: { state: 'taking', message: 'Releasing the shutter…', pictures } });
@@ -100,9 +108,17 @@ export const useCamera = create<CameraState>((set, get) => ({
     const first = new Promise<void>((resolve) => (arrived = resolve));
     // Subscribe before releasing the shutter, so that the picture cannot come first.
     const stop = cam.onPicture((picture) => {
-      pictures.push(shotPicture(picture));
+      const index = pictures.push({ name: picture.name, path: picture.path, file: Camera.pictureUrl(picture.path) }) - 1;
       update({});
       arrived();
+      void load(pictures[index]).then((loaded) => {
+        if (shot !== shots) {
+          if (loaded.url?.startsWith('blob:')) URL.revokeObjectURL(loaded.url);
+          return;
+        }
+        pictures[index] = loaded;
+        update({});
+      });
     });
     try {
       await cam.takePicture();
@@ -125,14 +141,12 @@ export const useCamera = create<CameraState>((set, get) => ({
   },
 }));
 
-function shotPicture(picture: Picture): ShotPicture {
-  const shot: ShotPicture = { name: picture.name, path: picture.path, size: picture.bytes.length };
-  const jpeg = /\.jpe?g$/i.test(picture.name) ? picture.bytes : rawPreview(picture.bytes);
-  if (jpeg) {
-    shot.url = URL.createObjectURL(new Blob([jpeg as BlobPart], { type: 'image/jpeg' }));
-    shot.preview = jpeg !== picture.bytes;
+async function load(picture: ShotPicture): Promise<ShotPicture> {
+  try {
+    return { ...picture, ...(await loadPicture(picture.file, picture.name)) };
+  } catch (e) {
+    return { ...picture, error: errorMessage(e) };
   }
-  return shot;
 }
 
 function without<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -168,8 +182,8 @@ export function followCamera(): () => void {
   });
   const timer = setInterval(() => {
     const { changing, shot } = useCamera.getState();
-    // During a shot, the driver is busy downloading the picture, e.g. 29 MB
-    // for a RAW: a request would only time out.
+    // During a shot, the driver is busy downloading the picture from the
+    // camera, e.g. 29 MB for a RAW: a request would only time out.
     const shooting = shot?.state === 'taking' || shot?.state === 'waiting';
     if (statusOf(url()) === 'connected' && Object.keys(changing).length === 0 && !shooting) {
       void useCamera.getState().refresh();

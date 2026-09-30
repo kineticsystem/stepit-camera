@@ -48,6 +48,20 @@ RUN apt-get install -y --no-install-recommends libjpeg-dev
 # To watch the live view, e.g. `ros2 run rqt_image_view rqt_image_view`.
 RUN apt-get install -y --no-install-recommends ros-jazzy-rqt-image-view ros-jazzy-compressed-image-transport
 
+# The web server of the test page and the pictures.
+RUN apt-get update && apt-get install -y --no-install-recommends libcpp-httplib-dev
+
+# The test page, in ./web, is built with Node.js, from the official binaries,
+# and pnpm, through corepack, which ships with Node.js and pins the pnpm version
+# declared in web/package.json. Only building it needs them: the web server
+# serves the result.
+ARG NODE_VERSION=24.15.0
+RUN apt-get update && apt-get install -y --no-install-recommends curl xz-utils ca-certificates \
+ && arch=$(dpkg --print-architecture | sed 's/amd64/x64/') \
+ && curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz \
+  | tar -xJ -C /usr/local --strip-components=1 \
+ && corepack enable
+
 # Testing and tooling.
 RUN apt-get install -y --no-install-recommends ros-jazzy-ament-cmake-gtest
 RUN apt-get install -y --no-install-recommends git
@@ -81,6 +95,10 @@ ENV HOME=/home/developer
 # has to be spelled out: nothing expands a ~ in an ENV.
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 ENV CYCLONEDDS_URI=/home/developer/.ros/cyclonedds.xml
+
+# Answer corepack's download prompt for pnpm, so that non-interactive commands
+# do not hang on it.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 # The repo is bind-mounted at ~/ws (see docker-compose.yml), so ./bin lives at
 # a fixed path inside the container. Putting it on the PATH here rather than in

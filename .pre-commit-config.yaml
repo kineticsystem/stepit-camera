@@ -1,4 +1,4 @@
-exclude: ^(build|install|log|modules)/
+exclude: ^(build|install|log|modules|web/node_modules|web/dist)/|^web/pnpm-lock\.yaml$
 
 # To use:
 #

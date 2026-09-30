@@ -40,6 +40,12 @@ if(BUILD_TESTING)
     ${sensor_msgs_TARGETS}
     ${std_srvs_TARGETS}
     ${stepit_camera_msgs_TARGETS})
+
+  # The test page and the pictures over HTTP.
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(HTTPLIB REQUIRED IMPORTED_TARGET cpp-httplib)
+  ament_add_gtest(test_web_server tests/test_web_server.cpp)
+  target_link_libraries(test_web_server stepit_camera::stepit_camera PkgConfig::HTTPLIB)
 endif()
 
 ament_package()

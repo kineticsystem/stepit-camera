@@ -47,6 +47,9 @@ namespace stepit_camera
  *   JPEG frames, while streaming.
  * - `~/picture` (stepit_camera_msgs/Picture): each picture the camera takes,
  *   downloaded as soon as it is reported, and saved into `download_directory`.
+ * - `~/saved_picture` (stepit_camera_msgs/Picture): each picture once saved,
+ *   without its content, for whoever can read the file instead, e.g. a web
+ *   page through the web server.
  * - `~/start_streaming`, `~/stop_streaming` (std_srvs/Trigger): the live view.
  * - `~/get_settings` (stepit_camera_msgs/GetSettings): the current settings
  *   and the values they accept.
@@ -93,6 +96,7 @@ private:
 
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr preview_publisher_;
   rclcpp::Publisher<stepit_camera_msgs::msg::Picture>::SharedPtr picture_publisher_;
+  rclcpp::Publisher<stepit_camera_msgs::msg::Picture>::SharedPtr saved_picture_publisher_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service_;
   rclcpp::Service<stepit_camera_msgs::srv::GetSettings>::SharedPtr get_settings_service_;

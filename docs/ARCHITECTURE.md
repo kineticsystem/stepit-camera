@@ -14,6 +14,7 @@
 - [One Thread Owns the Camera](#one-thread-owns-the-camera)
 - [Streaming](#streaming)
 - [Downloading the Pictures](#downloading-the-pictures)
+- [The Web Server](#the-web-server)
 - [The Exposure](#the-exposure)
 - [Losing the Camera](#losing-the-camera)
 - [The Container](#the-container)
@@ -49,13 +50,16 @@ flowchart LR
         GPhoto --> Driver["CameraDriver<br/>its own thread"]
         Driver --> ROS["CameraNode<br/>topics, services, parameters"]
     end
-    ROS -- "preview/compressed<br/>picture" --> Clients["Other nodes<br/>rqt_image_view"]
+    ROS -- "preview/compressed<br/>picture, saved_picture" --> Clients["Other nodes<br/>rqt_image_view"]
     Clients -- "start_streaming, stop_streaming<br/>get_settings, take_picture, parameters" --> ROS
     ROS -- "saves" --> Folder["pictures/"]
     ROS -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
     ROS <--> Bridge["rosbridge<br/>port 9091"]
-    Video --> Browser["Web pages<br/>StepIt UI"]
-    Bridge <--> Browser
+    Folder --> Web["web server<br/>port 8090"]
+    Page["web/dist<br/>the test page"] --> Web
+    Video -- "MJPEG" --> Browser["Web pages<br/>the test page"]
+    Bridge <-- "services, parameters<br/>saved_picture" --> Browser
+    Web -- "the page, the pictures" --> Browser
 ```
 
 The node's interface:
@@ -64,12 +68,13 @@ The node's interface:
 |---|---|---|
 | `~/preview/compressed` | `sensor_msgs/CompressedImage` topic | The live view, as JPEG frames, while streaming. |
 | `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, with its content and where it was saved. |
+| `~/saved_picture` | `stepit_camera_msgs/Picture` topic | Each picture once saved, without its content, for whoever can read the file: a node on the same computer, or a web page through the web server. |
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
 | `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
 
-The launch file also starts, for web pages, [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, rather than the one of StepIt Commander on port 9090, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only.
+The launch file also starts, for web pages, the web server of the package, which serves the test page and the saved pictures over HTTP on port 8090 (see [The Web Server](#the-web-server)), [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, rather than the one of StepIt Commander on port 9090, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only.
 
 ## The Packages
 
@@ -78,10 +83,12 @@ The split follows the [StepIt Commander](https://github.com/kineticsystem/stepit
 | Package | Role |
 |---|---|
 | `stepit_camera_msgs` | The message of a picture, and the service reading the settings. No code. |
-| `stepit_camera` | The driver: a library holding every class, the node executable, its parameters and its launch file. |
+| `stepit_camera` | The driver: a library holding every class, the node and web server executables, their parameters and the launch file. |
 | `stepit_camera_tests` | All tests, run against the fake camera. The other packages carry none. |
 
-The library is shared rather than static, so that its private dependencies, libgphoto2 and libjpeg, do not leak into the packages that link it, i.e. the tests.
+The library is shared rather than static, so that its private dependencies, libgphoto2, libjpeg and cpp-httplib, do not leak into the packages that link it, i.e. the tests.
+
+The test page, in [`web`](../web), is not a ROS package: a `COLCON_IGNORE` keeps colcon out of it, and the scripts in `bin` build and test it with pnpm. See [WEB_PAGE.md](WEB_PAGE.md).
 
 ## The Classes
 
@@ -230,7 +237,20 @@ When the camera connects, the node sets its `capturetarget`:
 - **Memory card**, with `keep_on_camera` true, the default. Every picture stays on the card as well: nothing is lost if the computer fails to download it.
 - **Internal RAM**, with `keep_on_camera` false. The pictures only live in the camera's memory until they are downloaded, and the driver deletes them after downloading them, so the card never fills up.
 
-The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture with its content, so that a node on another computer receives it too.
+The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture twice: on `~/saved_picture` without its content, and on `~/picture` with it, so that a node on another computer receives it too. A picture that could not be saved only comes on `~/picture`.
+
+## The Web Server
+
+`web_server` is a second executable of the package, launched next to the node, with [cpp-httplib](https://github.com/yhirose/cpp-httplib). `WebServer` serves two folders:
+
+- `/`: the test page, `web/dist`, as `build` bundles it;
+- `/pictures/<name>`: the pictures, `download_directory`, read from the same `camera.yaml` as the node.
+
+It serves the files as they are on disk, with `Range` requests, so that the test page reads only the JPEG preview of a RAW file: its location is in the first 64 KB of the file, and the preview of a 5D Mark II is about 1.4 MB of a 30 MB file. Every response allows any origin, and exposes `Content-Range`, so that a page served elsewhere, e.g. the application of the rig, can load the pictures too.
+
+The server is a process of its own, rather than a thread of the camera node: the node's threads stay those that own the camera and spin ROS, and the server can be left out with `web:=false`. It is a ROS node only to read its parameters from the same file and be launched the same way; it has no topic nor service.
+
+Two details of cpp-httplib matter. It sets `SO_REUSEPORT` by default, which lets a second server take the same port and share the requests with the first one, e.g. a server left over from a failed launch: `WebServer` sets `SO_REUSEADDR` only, so that such a server fails with a clear message. And its file extensions are case sensitive, while a Canon names its files in capitals, e.g. `IMG_0001.CR2`: both spellings are mapped.
 
 ## The Exposure
 
@@ -275,6 +295,7 @@ The container copies those of the other StepIt projects: the same Dockerfile str
 
 - The container is **privileged and mounts `/dev`**, like the robot's own container for its serial port. libgphoto2 opens the camera through `/dev/bus/usb`, and a camera that is unplugged and plugged in again comes back under a new device number, which a single mounted device would miss.
 - The image installs `libgphoto2-dev` and `libjpeg-dev`, and the `gphoto2` command line tool, to check the camera by hand.
+- The image installs `libcpp-httplib-dev` for the web server, and Node.js with pnpm to build the test page. The container shares the host's network, so the page's development server uses port 5174 rather than Vite's 5173, which the StepIt Editor takes.
 - The pictures go to `~/ws/pictures` in the container, which is the folder [`pictures`](../pictures) of the repo on the host. The folder is in the repo, with its content ignored by git, so that Docker never creates it as root.
 
 ## Tests
@@ -287,6 +308,9 @@ The tests run against the fake camera, so they need no hardware:
 | `test_fake_camera` | The fake camera behaves as the driver expects a camera to: live view, settings, events, unplugging. |
 | `test_camera_driver` | The loop: streaming on request and at the requested rate, downloading while streaming, deleting after download, tasks and their errors, reconnecting, stopping cleanly. |
 | `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters. |
+| `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, nothing served outside the two folders, a port already in use. |
+
+The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#tests).
 
 `GPhotoCamera` has no test of its own: it needs a real camera. Check it by hand, with the camera plugged in, following the README.
 
@@ -310,4 +334,6 @@ The tests run against the fake camera, so they need no hardware:
 
 **Parameters for the exposure, services for the live view.** A setting is a state, which `ros2 param`, `rqt_reconfigure` and launch files already know how to set, save and restore. Starting the live view is an action, which a service expresses better, and it returns at once.
 
-**Pictures are published with their content.** A 5D Mark II RAW file is about 25 MB, which is heavy for DDS over a network. The content makes the picture available to any node, even on another computer; a node on the same computer can read `path` instead.
+**Pictures are published with their content, and without it.** A 5D Mark II RAW file is about 30 MB, which is heavy for DDS over a network. The content on `~/picture` makes the picture available to any node, even on another computer. `~/saved_picture` carries the same message without it, for a node on the same computer, which reads `path`, and for web pages: rosbridge would send the content as base64 in JSON, about 40 MB of text, through the WebSocket that also carries the services, and decoded by JavaScript. Two topics rather than a parameter, so that both kinds of subscriber can be served at once.
+
+**HTTP for the pictures, in a server of the package.** A browser loads a file over HTTP in binary, in the background, with ranges, and gives it a URL it can link to. web_video_server only serves topics, and rosbridge only speaks JSON, so the package has its own server. It also serves the test page, so that the page and the pictures share an origin, and Node.js is needed only to build the page, not to run it.

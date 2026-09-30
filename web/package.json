@@ -1,21 +1,19 @@
 {
-  "name": "stepit-ui",
+  "name": "stepit-camera-web",
   "private": true,
   "version": "0.1.0",
-  "description": "The web control panel of the StepIt macro photography robot",
+  "description": "The test page of StepIt Camera",
   "type": "module",
   "packageManager": "pnpm@11.1.1",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
-    "start": "tsx src/server/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tsx": "^4.23.15",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

@@ -15,8 +15,8 @@ interface Section {
 }
 
 /**
- * The sections of the UI, one per part of the robot, in the order of the
- * navigation. Add one here to add a page, e.g. the macro rails.
+ * The sections of the page, in the order of the navigation. The test page has
+ * one, the camera; the application of the rig has one per part of the robot.
  */
 const SECTIONS: Section[] = [
   { id: 'camera', label: 'Camera', icon: <CameraIcon />, rosbridge: cameraRosbridgeUrl, page: () => <CameraPage /> },

@@ -9,3 +9,7 @@ source /opt/ros/jazzy/setup.bash
 cd "$(dirname "$(readlink -f "$0")")/.."
 
 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --symlink-install --event-handlers log-
+
+# The test page: type-check it and bundle it into web/dist, which the web
+# server serves.
+(cd web && pnpm run build)

@@ -121,6 +121,7 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
 
   preview_publisher_ = create_publisher<sensor_msgs::msg::CompressedImage>("~/preview/compressed", rclcpp::QoS(1));
   picture_publisher_ = create_publisher<stepit_camera_msgs::msg::Picture>("~/picture", rclcpp::QoS(10));
+  saved_picture_publisher_ = create_publisher<stepit_camera_msgs::msg::Picture>("~/saved_picture", rclcpp::QoS(10));
 
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -312,6 +313,11 @@ void CameraNode::onPicture(const CameraFile& file, std::vector<uint8_t>&& data)
   RCLCPP_INFO(get_logger(), "Downloaded %s (%.1f MB)%s", file.name.c_str(), static_cast<double>(data.size()) / 1e6,
               destination.c_str());
 
+  // Without its content first: the content is moved into the other message.
+  if (!message.path.empty())
+  {
+    saved_picture_publisher_->publish(message);
+  }
   message.data = std::move(data);
   picture_publisher_->publish(message);
 }

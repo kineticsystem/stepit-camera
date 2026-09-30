@@ -14,15 +14,16 @@ ament linters, `colcon`, libgphoto2 and the ROS 2 Jazzy environment only exist t
 
 The repo is bind-mounted at `~/ws`, so host edits are visible immediately and no rebuild is
 needed for code changes. `~/ws/bin` is on the `PATH` and `docker/bashrc` defines the aliases
-`build`, `test` and `update`, usable from any directory. The scripts `cd` to the workspace
+`build`, `test`, `update` and `dev`, usable from any directory. The scripts `cd` to the workspace
 root themselves.
 
 ## Commands
 
 ```bash
-update            # ./bin/update.sh -- rosdep install; run once after a dependency changes
-build             # ./bin/build.sh  -- colcon build, Debug, --symlink-install
-test              # ./bin/test.sh   -- colcon test + colcon test-result --all --verbose
+update            # ./bin/update.sh -- rosdep install + pnpm install in web/; after a dependency changes
+build             # ./bin/build.sh  -- colcon build, Debug, --symlink-install; then the test page into web/dist
+test              # ./bin/test.sh   -- the page's typecheck + vitest, then colcon test + test-result
+dev               # ./bin/dev.sh    -- Vite with hot reload for the test page, http://localhost:5174
 
 # One test target (targets are named after the files in src/stepit_camera_tests/tests)
 colcon test --packages-select stepit_camera_tests --ctest-args -R test_camera_driver \
@@ -33,6 +34,7 @@ ros2 launch stepit_camera camera.launch.py fake:=true   # no hardware needed
 ros2 service call /camera/start_streaming std_srvs/srv/Trigger
 ros2 service call /camera/take_picture std_srvs/srv/Trigger
 ros2 param set /camera iso 800
+# The test page on http://localhost:8090, the pictures on http://localhost:8090/pictures/<name>
 
 pre-commit run -a  # in the container; on the host: SKIP=ament_copyright,ament_lint_cmake,ament_cpplint
 ```
@@ -58,11 +60,31 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
   test: check it by hand with a real camera.
 - A new camera setting is one line in `SETTINGS` (`settings.hpp`) plus its choices in
   `FakeCamera`.
+- **Pictures reach web pages over HTTP, never through rosbridge.** `~/saved_picture` is
+  `~/picture` without the content; the page loads the file from `web_server`
+  (`/pictures/<name>`), a RAW through two `Range` requests for its JPEG preview. Do not make a
+  page subscribe to `~/picture`: rosbridge would send ~40 MB of base64 per RAW.
+- `web_server` (cpp-httplib) must keep `SO_REUSEADDR` only: httplib's default `SO_REUSEPORT` lets
+  a leftover server share the port silently.
+
+## The test page (`web/`)
+
+See `docs/WEB_PAGE.md`. A React 19 + zustand + Vite page, TypeScript strict, tested with vitest;
+not a ROS package (`web/COLCON_IGNORE`). It only tests the camera: the rig's application is
+StepIt UI, another repo.
+
+- **The browser talks to the driver's servers directly**: `web_server` (8090) for the page
+  and the pictures, rosbridge (9091) for services, parameters and `saved_picture`,
+  web_video_server (8081) for the live view.
+- **Layers**: `ros/` knows rosbridge only; `camera/` knows the camera's ROS interface and the
+  web server but not React; stores and components on top. Test with `tests/fakeSocket.ts` and
+  a stubbed `fetch`.
+- **web_video_server does not decode `%2F`**: write the topic unescaped in the stream URL.
 
 | Package | Rule |
 |---|---|
 | `stepit_camera_msgs` | Interfaces only, no code. |
-| `stepit_camera` | All the code, as a shared library, plus the node, config and launch file. |
+| `stepit_camera` | All the code, as a shared library, plus the node, the web server, config and launch file. |
 | `stepit_camera_tests` | All tests, against `FakeCamera`; the other packages carry none. |
 
 ## Conventions
@@ -70,4 +92,5 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
 - Every source file carries the MIT copyright header (`ament_copyright` enforces it).
 - Packages compile with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion`; C++17.
 - `cpplint` runs with `--linelength=121`; `clang-format` uses the repo `.clang-format`.
-- Update the README's parameter table and `docs/ARCHITECTURE.md` when the interface changes.
+- Update the README's parameter table and `docs/ARCHITECTURE.md` when the interface changes,
+  and `docs/WEB_PAGE.md` when the page changes.

@@ -6,7 +6,8 @@
   <description>
     The driver of a camera connected over USB, through libgphoto2, e.g. a Canon
     EOS 5D Mark II: it streams the live view, downloads each picture the camera
-    takes, and sets the exposure.
+    takes, and sets the exposure. A web server serves a test page and the
+    pictures over HTTP.
   </description>
   <maintainer email="lentigrams@gmail.com">developer</maintainer>
   <license>MIT</license>
@@ -14,6 +15,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>pkg-config</buildtool_depend>
 
+  <depend>libcpp-httplib-dev</depend>
   <depend>libgphoto-dev</depend>
   <depend>libjpeg</depend>
   <depend>rclcpp</depend>

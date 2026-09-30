@@ -1,4 +1,6 @@
 # A picture taken by the camera, downloaded as soon as the camera reported it.
+# On ~/picture, it comes with its content. On ~/saved_picture, it comes once
+# saved, without its content: data is empty, and the file is at path.
 
 # The stamp is the time the picture was downloaded, not the time of the shot:
 # it comes a fraction of a second after the shutter closes, more for a large
@@ -16,5 +18,6 @@ string folder
 # Where the picture was saved on the computer, or empty if it was not saved.
 string path
 
-# The content of the file, exactly as the camera stored it.
+# The content of the file, exactly as the camera stored it. Empty on
+# ~/saved_picture.
 uint8[] data

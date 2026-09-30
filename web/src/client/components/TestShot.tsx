@@ -24,10 +24,13 @@ export function TestShot() {
               <img src={picture.url} alt={picture.name} />
             </a>
           ) : (
-            <div className="shot-placeholder">The browser cannot show this file</div>
+            <div className="shot-placeholder">
+              {picture.error ?? (picture.size === undefined ? 'Loading…' : 'The browser cannot show this file')}
+            </div>
           )}
           <figcaption>
-            <strong>{picture.name}</strong> <span className="muted">{(picture.size / 1e6).toFixed(1)} MB</span>
+            <a href={picture.file} download={picture.name}><strong>{picture.name}</strong></a>
+            {picture.size !== undefined && <span className="muted"> {(picture.size / 1e6).toFixed(1)} MB</span>}
             {picture.preview && <span className="muted"> · its JPEG preview</span>}
             {picture.path && <div className="mono small muted" title={picture.path}>{picture.path}</div>}
           </figcaption>

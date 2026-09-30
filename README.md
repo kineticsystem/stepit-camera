@@ -13,6 +13,7 @@
   - [Streaming](#streaming)
   - [Pictures](#pictures)
   - [Exposure](#exposure)
+- [The Test Page](#the-test-page)
 - [Parameters](#parameters)
 - [Troubleshooting](#troubleshooting)
 - [Running the Camera with the Whole Rig](#running-the-camera-with-the-whole-rig)
@@ -25,7 +26,9 @@ StepIt Camera is a ROS2 driver for a DSLR or mirrorless camera connected over US
 - it downloads every picture the camera takes, saves it, and publishes it;
 - it sets the exposure: ISO, shutter speed, aperture and exposure compensation, and the white balance.
 
-The driver does not take pictures itself: an external precision device fires the camera through the remote shutter release cable. The driver notices each picture as soon as the camera reports it, and downloads it. The one exception is a test shot, which the driver fires over USB on request, e.g. from the [StepIt UI](https://github.com/kineticsystem/stepit-ui), to check the framing and the exposure.
+It comes with a test page, a web page that shows the live view, sets the exposure and takes test shots, to try the camera and the driver from a browser. It is not the application of the rig: see [The Test Page](#the-test-page).
+
+The driver does not take pictures itself: an external precision device fires the camera through the remote shutter release cable. The driver notices each picture as soon as the camera reports it, and downloads it. The one exception is a test shot, which the driver fires over USB on request, e.g. from the test page, to check the framing and the exposure.
 
 The camera is driven through [libgphoto2](http://www.gphoto.org/proj/libgphoto2/), so it works with the cameras that libgphoto2 [supports](http://www.gphoto.org/proj/libgphoto2/support.php) with _Liveview_ and _Configuration_, which includes most Canon EOS cameras. On Nikon and Sony cameras, libgphoto2 names the aperture `f-number` rather than `aperture`, so the driver cannot set their aperture yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it is built.
 
@@ -96,13 +99,13 @@ Install all required dependencies.
 update
 ```
 
-Run Colcon to build the project.
+Build the project: the driver with Colcon, and the test page with pnpm, into `web/dist`.
 
 ```
 build
 ```
 
-Execute all tests. They run against the fake camera, so they need no hardware.
+Execute all tests, of the driver and of the test page. The driver's run against the fake camera, so they need no hardware.
 
 ```
 test
@@ -137,12 +140,16 @@ ros2 launch stepit_camera camera.launch.py
 
 Add `stream:=true` to start the live view as soon as the camera connects.
 
-The launch file also starts two servers for web pages, such as the [StepIt UI](https://github.com/kineticsystem/stepit-ui):
+The launch file also starts three servers for web pages, such as the [test page](#the-test-page):
 
+- the web server of this package on port 8090, which serves the test page, <http://localhost:8090>, and the saved pictures, e.g. <http://localhost:8090/pictures/IMG_0001.JPG>;
 - [web_video_server](https://github.com/RobotWebTools/web_video_server) on port 8081, which streams the live view to a browser, e.g. <http://localhost:8081/stream?topic=/camera/preview&type=ros_compressed>;
-- [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and receive the pictures. It is not on port 9090, which belongs to the rosbridge of StepIt Commander: only a rosbridge running next to this driver knows its messages, `stepit_camera_msgs`.
+- [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and hear of the pictures. It is not on port 9090, which belongs to the rosbridge of StepIt Commander: only a rosbridge running next to this driver knows its messages, `stepit_camera_msgs`.
 
-Leave them out with `web_video:=false` and `rosbridge:=false`, or move them with `web_video_port:=<port>` and `rosbridge_port:=<port>`.
+Leave them out with `web:=false`, `web_video:=false` and `rosbridge:=false`, or move them with `web_port:=<port>`, `web_video_port:=<port>` and `rosbridge_port:=<port>`.
+
+> [!IMPORTANT]
+> The servers listen on all network interfaces, so anyone on the network can open the test page, control the camera and download the pictures.
 
 Open a different terminal, attached to the same container with `./docker/dock.sh stepit-camera start`, to run the commands below.
 
@@ -165,13 +172,18 @@ Stopping the live view lowers the mirror again, so that the camera is ready to s
 
 ### Pictures
 
-Every picture the camera takes is downloaded straight away, saved into the folder [`pictures`](pictures) of this repo, and published on `/camera/picture` (`stepit_camera_msgs/msg/Picture`) with its content. A shot in RAW+JPEG produces two files, and two messages.
+Every picture the camera takes is downloaded straight away, saved into the folder [`pictures`](pictures) of this repo, and published on two topics, both `stepit_camera_msgs/msg/Picture`:
+
+- `/camera/picture`, with its content, for a node that cannot read the file, e.g. on another computer;
+- `/camera/saved_picture`, once saved, without its content: a node on the same computer reads the file at `path`, and a web page loads it from the web server, at `/pictures/<file name>`. A RAW file of a 5D Mark II is about 30 MB, too much for rosbridge, which would send it as 40 MB of base64 text.
+
+A shot in RAW+JPEG produces two files, and two messages on each topic.
 
 ```
-ros2 topic echo /camera/picture --field path
+ros2 topic echo /camera/saved_picture --field path
 ```
 
-Take a test shot, over USB. The picture comes like any other, on `/camera/picture`. This works with the fake camera too, which then takes a picture as the external device would:
+Take a test shot, over USB. The picture comes like any other, on `/camera/picture` and `/camera/saved_picture`. This works with the fake camera too, which then takes a picture as the external device would:
 
 ```
 ros2 service call /camera/take_picture std_srvs/srv/Trigger
@@ -211,6 +223,20 @@ ros2 service call /camera/get_settings stepit_camera_msgs/srv/GetSettings
 
 The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied every time the camera connects. An empty value leaves the camera as it is.
 
+## The Test Page
+
+The test page, in [`web`](web), is a web page to try the camera and the driver from a browser. It is served by the driver's web server, on <http://localhost:8090>, once `build` has built it:
+
+- **Live view** (left): what the camera sees, about 10 frames per second. **Stop** switches the live view off, which lowers the mirror; **Start** switches it on again. The page remembers the choice, and starts the live view when it opens.
+- **Settings** (right): the ISO, the shutter speed, the aperture, the white balance and the exposure compensation, each with the values the camera accepts right now. These depend on the mode dial and on the lens, see [Prepare the Camera](#prepare-the-camera); a setting the camera does not let us change is greyed out. A change made on the camera itself shows up within a few seconds.
+- **Test shot**: releases the shutter and shows the picture, once saved. A JPEG is shown as it is; a RAW file is shown through the JPEG preview it carries, which the page reads from the file without loading the rest of it. The name of the file downloads it whole. The live view pauses for the shot, since the mirror moves: the last frame stays, greyed out, until the picture has come.
+
+The gear at the top right holds the preferences of the browser: the theme, where the camera's rosbridge and web_video_server are, by default on the machine that serves the page, and the name of the camera node.
+
+For working on the page itself, `dev` runs the Vite development server with hot reload, on <http://localhost:5174>, next to the driver. See [docs/WEB_PAGE.md](docs/WEB_PAGE.md) for how the page is built.
+
+The test page only controls the camera. The application of the whole rig, with the rails, the rotary stage and the lights, is [StepIt UI](https://github.com/kineticsystem/stepit-ui); it can load the pictures from the same web server.
+
 ## Parameters
 
 | Parameter | Default | Description |
@@ -220,7 +246,7 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 | `aperture` | `""` | The aperture, e.g. `8` or `5.6`. |
 | `exposure_compensation` | `""` | The exposure compensation in stops, e.g. `-1` or `0.3`. It has no effect on M, unless the ISO is Auto. |
 | `white_balance` | `""` | The white balance, e.g. `Auto`, `Daylight` or `Cloudy`. |
-| `download_directory` | `~/ws/pictures` | Where to save the pictures. Empty not to save them. |
+| `download_directory` | `~/ws/pictures` | Where to save the pictures, and where the web server finds them. Empty not to save them. |
 | `keep_on_camera` | `true` | Store the pictures on the memory card too. When `false`, they only go to the camera's memory and are deleted once downloaded: the card never fills up, but a picture that cannot be downloaded is lost. |
 | `stream_on_start` | `false` | Start the live view as soon as the camera connects. Set by the launch argument `stream`. |
 | `preview_rate` | `10.0` | The frames of the live view per second, at most. |
@@ -230,10 +256,20 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 
 Only the five settings of the camera, from `iso` to `white_balance`, can change while the driver runs; the others are read once, at start.
 
+The web server, `/web_server`, reads `download_directory` from the same file, and has parameters of its own:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `web_directory` | `~/ws/web/dist` | The test page, as built by `build`. |
+| `port` | `8090` | The HTTP port. Set by the launch argument `web_port`. |
+| `host` | `0.0.0.0` | The address to listen on. |
+
 | Launch argument | Default | Description |
 |---|---|---|
 | `fake` | `false` | Run a fake camera. |
 | `stream` | `false` | Start the live view as soon as the camera connects. |
+| `web` | `true` | Start the web server, for the test page and the pictures. |
+| `web_port` | `8090` | The HTTP port of the web server. |
 | `web_video` | `true` | Start web_video_server, to show the live view in web pages. |
 | `web_video_port` | `8081` | The HTTP port of web_video_server. |
 | `rosbridge` | `true` | Start rosbridge, for web pages to use the driver. |
@@ -241,7 +277,7 @@ Only the five settings of the camera, from `iso` to `white_balance`, can change 
 
 ## Troubleshooting
 
-**The camera is never found.** Check that the host sees it:
+**The camera is never found**, and the driver keeps _Waiting for a camera_. Check that the host sees it:
 
 ```
 lsusb
@@ -273,6 +309,14 @@ systemctl --user mask --now gvfs-gphoto2-volume-monitor.service
 **The shutter button on the camera does nothing.** A 5D Mark II ignores its own shutter button while the live view runs over USB: stop the live view, or take a test shot. Whether it also ignores the remote shutter release cable during the live view is not tested yet.
 
 **The white balance offers a single value.** Right after connecting, a Canon EOS may not have sent the list of its white balances yet, and libgphoto2 then offers the current one only. Read the settings again a moment later.
+
+**The test page says _The test page is not built_.** Run `build`, which builds it into `web/dist`.
+
+**A server says its port is already in use**, e.g. _Cannot listen on 0.0.0.0:8090_. Another driver is running, maybe left over from a launch that failed: stop it, or choose other ports with the launch arguments.
+
+**The test page stays _Disconnected_.** The camera's rosbridge is not running, or not where the page's settings say. Check that nothing else took port 9091.
+
+**The live view on the test page says _Cannot reach web_video_server_.** Check that the driver was started with `web_video:=true`, the default, and the _Video server_ setting of the page.
 
 **The camera disconnects after a minute.** It switched itself off: set _Auto power off_ to _Off_ in the camera's menu.
 

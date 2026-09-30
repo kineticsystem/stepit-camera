@@ -55,14 +55,19 @@ describe('the camera over rosbridge', () => {
     await expect(failed).rejects.toThrow('The camera is not connected');
   });
 
-  it('receives the pictures with their bytes, reliably', () => {
+  it('hears of the saved pictures, reliably, without their content', () => {
     const listener = vi.fn();
     camera.onPicture(listener);
     expect(socket.lastSent('subscribe')).toMatchObject({
-      topic: '/camera/picture', type: 'stepit_camera_msgs/msg/Picture', qos: { reliability: 'reliable' },
+      topic: '/camera/saved_picture', type: 'stepit_camera_msgs/msg/Picture', qos: { reliability: 'reliable' },
     });
-    socket.receive({ op: 'publish', topic: '/camera/picture', msg: { name: 'IMG_0001.JPG', path: '/p/IMG_0001.JPG', data: btoa('\xff\xd8') } });
-    expect(listener).toHaveBeenCalledWith({ name: 'IMG_0001.JPG', path: '/p/IMG_0001.JPG', bytes: new Uint8Array([0xff, 0xd8]) });
+    socket.receive({ op: 'publish', topic: '/camera/saved_picture', msg: { name: 'IMG_0001.JPG', path: '/p/IMG_0001_1.JPG', data: [] } });
+    expect(listener).toHaveBeenCalledWith({ name: 'IMG_0001.JPG', path: '/p/IMG_0001_1.JPG' });
+  });
+
+  it('loads a saved picture from the web server, under the name it was saved with', () => {
+    expect(Camera.pictureUrl('/home/developer/ws/pictures/IMG_0001_1.CR2')).toBe('/pictures/IMG_0001_1.CR2');
+    expect(Camera.pictureUrl('/p/IMG 1#.JPG', 'http://robot:8090')).toBe('http://robot:8090/pictures/IMG%201%23.JPG');
   });
 
   it('streams the live view through web_video_server, without decoding it', () => {

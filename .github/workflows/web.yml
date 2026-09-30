@@ -1,11 +1,18 @@
-# Type-checks, tests and builds the UI on every push and pull request.
+# Type-checks, tests and builds the test page, in ./web, on every push and pull
+# request that changes it.
 
-name: CI
+name: Test page
 
 on:
   push:
     branches: [main]
+    paths: [web/**, .github/workflows/web.yml]
   pull_request:
+    paths: [web/**, .github/workflows/web.yml]
+
+defaults:
+  run:
+    working-directory: web
 
 jobs:
   test:
@@ -13,10 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm run test

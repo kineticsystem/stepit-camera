@@ -1,5 +1,6 @@
 # Parameters of the camera driver. The wildcard '/**' makes them independent
-# of the name the node is launched with.
+# of the name the node is launched with, and gives them to the web server too,
+# which only takes those it knows, e.g. download_directory.
 /**:
   ros__parameters:
 
@@ -8,7 +9,8 @@
 
     # Where to save the pictures the camera takes. The repo is mounted at ~/ws
     # in the container, so they land in its `pictures` folder on the host.
-    # Empty not to save them: they are still published on ~/picture.
+    # Empty not to save them: they are still published on ~/picture, but the
+    # web server cannot serve them. The web server reads this one too.
     download_directory: "~/ws/pictures"
 
     # Store each picture on the memory card, as well as downloading it. When
@@ -39,3 +41,11 @@
     aperture: ""
     exposure_compensation: ""
     white_balance: ""
+
+# Parameters of the web server, which serves the test page and the pictures.
+# Its port is the launch argument web_port.
+/**/web_server:
+  ros__parameters:
+
+    # The test page, as built by build.sh.
+    web_directory: "~/ws/web/dist"

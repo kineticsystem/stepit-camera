@@ -5,9 +5,10 @@
 //   <node>/set_parameters    change a setting, e.g. iso, as `ros2 param set`
 //   <node>/start_streaming   the live view on, and off with stop_streaming
 //   <node>/take_picture      release the shutter for a test shot
-//   <node>/picture           each picture the camera takes, downloaded
+//   <node>/saved_picture     each picture the camera takes, once saved, without
+//                            its content, which the web server serves
 
-import { decodeBytes, type Rosbridge } from '../ros/rosbridge';
+import type { Rosbridge } from '../ros/rosbridge';
 
 export interface CameraSetting {
   /** The name of the parameter, e.g. shutter_speed. */
@@ -21,9 +22,8 @@ export interface CameraSetting {
 export interface Picture {
   /** The name of the file on the camera, e.g. IMG_0042.JPG. */
   name: string;
-  /** Where the driver saved it, or empty. */
+  /** Where the driver saved it. */
   path: string;
-  bytes: Uint8Array;
 }
 
 interface TriggerResponse {
@@ -42,7 +42,6 @@ interface SetParametersResponse {
 interface PictureMessage {
   name: string;
   path: string;
-  data: string | number[];
 }
 
 /** ParameterType of rcl_interfaces: the settings are string parameters. */
@@ -88,15 +87,25 @@ export class Camera {
   }
 
   /**
-   * Calls the listener with every picture the camera takes. A picture is the
-   * whole file, e.g. 25 MB for a RAW: subscribe only while waiting for one.
+   * Calls the listener with every picture the camera takes, once the driver
+   * saved it. The message has no content: load it from pictureUrl().
    */
   onPicture(listener: (picture: Picture) => void): () => void {
-    // Reliable: a picture is thousands of DDS fragments, and with rosbridge's
-    // default, best effort, losing any one of them loses the whole picture.
-    return this.ros.subscribe<PictureMessage>(`${this.node}/picture`, 'stepit_camera_msgs/msg/Picture', (message) =>
-      listener({ name: message.name, path: message.path, bytes: decodeBytes(message.data) }),
+    // Reliable, not rosbridge's default, best effort: a lost message is a
+    // lost test shot.
+    return this.ros.subscribe<PictureMessage>(`${this.node}/saved_picture`, 'stepit_camera_msgs/msg/Picture', (message) =>
+      listener({ name: message.name, path: message.path }),
     { reliability: 'reliable', durability: 'volatile', history: 'keep_last', depth: 2 });
+  }
+
+  /**
+   * The address of a saved picture on the camera's web server, which serves
+   * the driver's download_directory under /pictures. Relative to the page by
+   * default: the same server serves both.
+   */
+  static pictureUrl(path: string, webUrl = ''): string {
+    const name = path.slice(path.lastIndexOf('/') + 1);
+    return `${webUrl}/pictures/${encodeURIComponent(name)}`;
   }
 
   /** The address of the live view on web_video_server, for an <img>. */
