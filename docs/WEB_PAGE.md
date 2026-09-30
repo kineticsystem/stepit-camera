@@ -35,18 +35,40 @@ config:
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
 ---
-flowchart LR
-    subgraph Camera["StepIt Camera container"]
-        Bridge["rosbridge<br/>port 9091"] <--> Node["camera node"]
-        Video["web_video_server<br/>port 8081"] -- "preview/compressed" --- Node
-        Node -- "saves" --> Folder["pictures/"]
+flowchart TB
+    subgraph Container["StepIt Camera container"]
+        Node["camera node"] -- "saves" --> Folder["pictures/"]
+        Node -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
+        Bridge["rosbridge<br/>port 9091"] <--> Node
         Folder --> Web["web server<br/>port 8090"]
         Dist["web/dist"] --> Web
     end
     Web -- "HTML, JS<br/>the pictures" --> Browser["Browser<br/>React page"]
-    Browser <-- "WebSocket, JSON<br/>services, parameters, saved_picture" --> Bridge
+    Bridge <-- "WebSocket, JSON<br/>services, parameters<br/>saved_picture" --> Browser
     Video -- "MJPEG" --> Browser
+
+    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
 ```
 
 ## The Layers
@@ -111,6 +133,20 @@ config:
     actorLineColor: "#8b949e"
     signalColor: "#8b949e"
     signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
 ---
 sequenceDiagram
     participant UI as Page

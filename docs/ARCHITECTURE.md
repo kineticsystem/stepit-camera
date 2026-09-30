@@ -42,16 +42,35 @@ config:
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
 ---
-flowchart LR
+flowchart TB
     Trigger["External device"] -- "shutter release cable" --> Camera["Canon EOS 5D Mark II"]
-    Camera -- "USB, PTP" --> GPhoto["libgphoto2"]
+    Camera -- "USB, PTP" --> GPhoto
     subgraph Node["camera node"]
-        GPhoto --> Driver["CameraDriver<br/>its own thread"]
+        GPhoto["libgphoto2"] --> Driver["CameraDriver<br/>its own thread"]
         Driver --> ROS["CameraNode<br/>topics, services, parameters"]
     end
-    ROS -- "preview/compressed<br/>picture, saved_picture" --> Clients["Other nodes<br/>rqt_image_view"]
-    Clients -- "start_streaming, stop_streaming<br/>get_settings, take_picture, parameters" --> ROS
+    ROS <-- "topics, services<br/>parameters" --> Clients["Other nodes<br/>rqt_image_view"]
     ROS -- "saves" --> Folder["pictures/"]
     ROS -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
     ROS <--> Bridge["rosbridge<br/>port 9091"]
@@ -60,6 +79,8 @@ flowchart LR
     Video -- "MJPEG" --> Browser["Web pages<br/>the test page"]
     Bridge <-- "services, parameters<br/>saved_picture" --> Browser
     Web -- "the page, the pictures" --> Browser
+
+    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
 ```
 
 The node's interface:
@@ -102,6 +123,26 @@ config:
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
 ---
 classDiagram
     class Camera {
@@ -171,6 +212,26 @@ config:
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
 ---
 flowchart TD
     Start{"Connected?"} -- no --> Open["Open the camera"]
@@ -182,6 +243,8 @@ flowchart TD
     Frame -- no --> Wait["Wait for new files<br/>until the next frame is due"]
     Wait -- "files" --> Download["Download each one<br/>on_picture"] --> Start
     Wait -- "time is up" --> Start
+
+    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
 ```
 
 Any other thread that needs the camera, e.g. the node changing the ISO, queues a **task** with `CameraDriver::run()`, and waits for its result. A task is a function of the camera wrapped in a `std::packaged_task`, so its return value and its exceptions reach the caller as if it had called the camera itself. The loop runs the queued tasks at every turn, and a turn lasts at most `poll_period` (100 ms) when not streaming, or until the next frame when streaming, so a task never waits long.
@@ -212,6 +275,20 @@ config:
     actorLineColor: "#8b949e"
     signalColor: "#8b949e"
     signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
 ---
 sequenceDiagram
     participant Device as External device
