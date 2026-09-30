@@ -16,7 +16,7 @@
 - [The Test Page](#the-test-page)
 - [Parameters](#parameters)
 - [Troubleshooting](#troubleshooting)
-- [Running the Camera with the Whole Rig](#running-the-camera-with-the-whole-rig)
+- [Running the Driver from Another Project](#running-the-driver-from-another-project)
 
 ## Introduction
 
@@ -26,9 +26,9 @@ StepIt Camera is a ROS2 driver for a DSLR or mirrorless camera connected over US
 - it downloads every picture the camera takes, saves it, and publishes it;
 - it sets the exposure: ISO, shutter speed, aperture and exposure compensation, and the white balance.
 
-It comes with a test page, a web page that shows the live view, sets the exposure and takes test shots, to try the camera and the driver from a browser. It is not the application of the rig: see [The Test Page](#the-test-page).
+It comes with a test page, a web page that shows the live view, sets the exposure and takes test shots, to try the camera and the driver from a browser: see [The Test Page](#the-test-page).
 
-The driver does not take pictures itself: an external precision device fires the camera through the remote shutter release cable. The driver notices each picture as soon as the camera reports it, and downloads it. The one exception is a test shot, which the driver fires over USB on request, e.g. from the test page, to check the framing and the exposure.
+The driver does not decide when to take a picture: whatever fires the camera, e.g. a device plugged into its remote shutter release socket, the driver notices each picture as soon as the camera reports it, and downloads it. A shot fired by a device keeps the timing of that device, which a command over USB cannot match. The one exception is a test shot, which the driver fires over USB on request, e.g. from the test page, to check the framing and the exposure.
 
 The camera is driven through [libgphoto2](http://www.gphoto.org/proj/libgphoto2/), so it works with the cameras that libgphoto2 [supports](http://www.gphoto.org/proj/libgphoto2/support.php) with _Liveview_ and _Configuration_, which includes most Canon EOS cameras. On Nikon and Sony cameras, libgphoto2 names the aperture `f-number` rather than `aperture`, so the driver cannot set their aperture yet. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it is built.
 
@@ -48,7 +48,7 @@ For a real application, we need:
 - 1 x camera supported by libgphoto2 with _Liveview_ and _Configuration_.
 - 1 x USB cable to connect the camera to the computer.
 - 1 x AC adapter for the camera, because the live view drains the battery quickly.
-- The external device triggering the camera through its remote shutter release socket.
+- Optionally, a device that fires the camera through its remote shutter release socket, e.g. a remote or an intervalometer.
 
 ## Install StepIt Camera
 
@@ -121,7 +121,7 @@ The driver can set the exposure only as far as the camera allows it. The modes b
 - Turn the mode dial to **M**. On most cameras the mode dial is mechanical and cannot be changed over USB. On M, we can set the ISO, the shutter speed and the aperture. On Av, only the aperture; on Tv, only the shutter speed.
 - Use a lens whose aperture the camera controls. A manual lens has no aperture setting.
 - Enable the live view for stills in the camera's menu, if it has such a setting. Without it, the camera may refuse to stream.
-- Plug the external device into the remote shutter release socket, and the USB cable into the computer.
+- Plug the USB cable into the computer, and the device that fires the camera, if any, into the remote shutter release socket.
 
 ## Running the Application
 
@@ -144,7 +144,7 @@ The launch file also starts three servers for web pages, such as the [test page]
 
 - the web server of this package on port 8090, which serves the test page, <http://localhost:8090>, and the saved pictures, e.g. <http://localhost:8090/pictures/IMG_0001.JPG>;
 - [web_video_server](https://github.com/RobotWebTools/web_video_server) on port 8081, which streams the live view to a browser, e.g. <http://localhost:8081/stream?topic=/camera/preview&type=ros_compressed>;
-- [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and hear of the pictures. It is not on port 9090, which belongs to the rosbridge of StepIt Commander: only a rosbridge running next to this driver knows its messages, `stepit_camera_msgs`.
+- [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and hear of the pictures. It is not on rosbridge's default port, 9090, so that it can run next to another rosbridge: a rosbridge only knows the messages installed next to it, and only this one knows the driver's messages, `stepit_camera_msgs`.
 
 Leave them out with `web:=false`, `web_video:=false` and `rosbridge:=false`, or move them with `web_port:=<port>`, `web_video_port:=<port>` and `rosbridge_port:=<port>`.
 
@@ -183,7 +183,7 @@ A shot in RAW+JPEG produces two files, and two messages on each topic.
 ros2 topic echo /camera/saved_picture --field path
 ```
 
-Take a test shot, over USB. The picture comes like any other, on `/camera/picture` and `/camera/saved_picture`. This works with the fake camera too, which then takes a picture as the external device would:
+Take a test shot, over USB. The picture comes like any other, on `/camera/picture` and `/camera/saved_picture`. This works with the fake camera too, which then takes a picture as a real camera would:
 
 ```
 ros2 service call /camera/take_picture std_srvs/srv/Trigger
@@ -194,7 +194,7 @@ The live view pauses for the shot, for a second or so, and goes on by itself.
 A picture never overwrites another one: if a file of the same name already exists, e.g. because the camera started numbering from `IMG_0001` again, it gets a suffix, e.g. `IMG_0001_1.JPG`.
 
 > [!IMPORTANT]
-> The stamp of a picture is the time it was downloaded, a fraction of a second after the shot, not the time of the shot. For a precise time, use the time the external device fired the camera.
+> The stamp of a picture is the time it was downloaded, a fraction of a second after the shot, not the time of the shot. For a precise time, use the time the camera was fired, e.g. as recorded by the device that fired it.
 
 ### Exposure
 
@@ -235,7 +235,7 @@ The gear at the top right holds the preferences of the browser: the theme, where
 
 For working on the page itself, `dev` runs the Vite development server with hot reload, on <http://localhost:5174>, next to the driver. See [docs/WEB_PAGE.md](docs/WEB_PAGE.md) for how the page is built.
 
-The test page only controls the camera. The application of the whole rig, with the rails, the rotary stage and the lights, is [StepIt UI](https://github.com/kineticsystem/stepit-ui); it can load the pictures from the same web server.
+Other web pages can use the same servers. The web server lets pages of any origin load the pictures, e.g. a page served by another application.
 
 ## Parameters
 
@@ -320,9 +320,9 @@ systemctl --user mask --now gvfs-gphoto2-volume-monitor.service
 
 **The camera disconnects after a minute.** It switched itself off: set _Auto power off_ to _Off_ in the camera's menu.
 
-## Running the Camera with the Whole Rig
+## Running the Driver from Another Project
 
-The camera is a module of [StepIt Macro](https://github.com/kineticsystem/stepit-macro), which runs it together with the other parts of the focus stacking rig, under `modules/stepit-camera`. Its `stepit-camera` service extends the `dev` service of [`docker/docker-compose.yml`](docker/docker-compose.yml), so the Dockerfile, the mounts and the network settings stay defined here:
+Another project can run the driver in its own Docker Compose file, without copying the container's definition: its service extends the `dev` service of [`docker/docker-compose.yml`](docker/docker-compose.yml), so the Dockerfile, the mounts and the network settings stay defined here. It only replaces the command, to start the driver rather than an idle container. For example, with this repo checked out in `modules/stepit-camera`:
 
 ```yaml
   stepit-camera:
@@ -343,4 +343,4 @@ The camera is a module of [StepIt Macro](https://github.com/kineticsystem/stepit
         && exec ros2 launch stepit_camera camera.launch.py'
 ```
 
-Run one or the other, not both: remove the container made by this repo's `dock.sh` before starting StepIt Macro, e.g. with `./docker/dock.sh stepit-camera clean`, and the other way round.
+The code has to be built in that container first, with `update.sh` and `build.sh`. Run one container or the other, not both, since both open the camera: remove the container made by this repo's `dock.sh` first, e.g. with `./docker/dock.sh stepit-camera clean`, and the other way round.
