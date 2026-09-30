@@ -18,3 +18,9 @@ fi
 
 rosdep update
 rosdep install --ignore-src --from-paths . -y -r
+
+# The JavaScript dependencies of the test page, at the versions of its
+# pnpm-lock.yaml. When node_modules was installed by another pnpm, e.g. on the
+# host rather than in the container, pnpm has to rebuild it: allow that without
+# a prompt.
+(cd web && pnpm install --frozen-lockfile --config.confirmModulesPurge=false)

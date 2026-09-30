@@ -47,11 +47,11 @@ Finally, run this to remove container and image:
 
 ## Working with the code
 
-Inside the container, the repo is bind-mounted at `~/ws`, so every package under `~/ws/src` is a normal colcon package. `~/ws/bin` is on the `PATH` and the scripts are aliased, so `build`, `test` and `update` work from any directory (they always act on the workspace root):
+Inside the container, the repo is bind-mounted at `~/ws`, so every package under `~/ws/src` is a normal colcon package, and the test page is in `~/ws/web`. `~/ws/bin` is on the `PATH` and the scripts are aliased, so `build`, `test`, `update` and `dev` work from any directory (they always act on the workspace root):
 
 ```bash
-update    # only once: rosdep install
-build
+update    # only once: rosdep install, and pnpm install for the test page
+build     # the driver, then the test page
 source ~/ws/install/setup.bash
 ros2 launch stepit_camera camera.launch.py fake:=true
 ```

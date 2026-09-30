@@ -1,4 +1,7 @@
-# A picture taken by the camera, downloaded as soon as the camera reported it.
+# A picture taken by the camera, downloaded as soon as the camera reported it,
+# and saved. The message says where the file is, not what is in it: a RAW file
+# is tens of megabytes, too heavy for DDS. Read the file at path, or load it
+# from the web server of stepit_camera, at /pictures/<file name of path>.
 
 # The stamp is the time the picture was downloaded, not the time of the shot:
 # it comes a fraction of a second after the shutter closes, more for a large
@@ -13,8 +16,8 @@ string name
 # The folder of the file on the camera, e.g. /store_00010001/DCIM/100CANON.
 string folder
 
-# Where the picture was saved on the computer, or empty if it was not saved.
+# Where the picture was saved on the computer, e.g.
+# /home/developer/ws/pictures/IMG_0042.CR2. The file name may differ from name:
+# a file is never overwritten, so a name that comes back gets a suffix, e.g.
+# IMG_0001_1.JPG.
 string path
-
-# The content of the file, exactly as the camera stored it.
-uint8[] data

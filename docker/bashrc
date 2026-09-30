@@ -14,3 +14,4 @@ source /opt/ros/jazzy/setup.bash
 alias build='build.sh'
 alias test='test.sh'
 alias update='update.sh'
+alias dev='dev.sh'

@@ -4,15 +4,17 @@
   <name>stepit_camera_tests</name>
   <version>0.1.0</version>
   <description>
-    Tests of the camera driver: the settings, the driver's thread and the ROS2
-    node, run against a fake camera.
+    Tests of the camera driver: the settings, the driver's thread, the ROS2
+    node, run against a fake camera, and the web server.
   </description>
   <maintainer email="lentigrams@gmail.com">developer</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>libcpp-httplib-dev</test_depend>
   <test_depend>rclcpp</test_depend>
   <test_depend>sensor_msgs</test_depend>
   <test_depend>std_srvs</test_depend>

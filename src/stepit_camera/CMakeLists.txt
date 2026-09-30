@@ -20,17 +20,20 @@ find_package(stepit_camera_msgs REQUIRED)
 find_package(Threads REQUIRED)
 
 pkg_check_modules(GPHOTO2 REQUIRED IMPORTED_TARGET libgphoto2)
+pkg_check_modules(HTTPLIB REQUIRED IMPORTED_TARGET cpp-httplib)
 
 ######################################################
 # The driver, as a library, so that it can be tested. Shared, so that its
-# private dependencies, libgphoto2 and libjpeg, stay out of its interface.
+# private dependencies, libgphoto2, libjpeg and cpp-httplib, stay out of its
+# interface.
 
 add_library(stepit_camera SHARED
   src/camera_driver.cpp
   src/camera_node.cpp
   src/fake_camera.cpp
   src/gphoto_camera.cpp
-  src/settings.cpp)
+  src/settings.cpp
+  src/web_server.cpp)
 
 target_include_directories(stepit_camera PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -45,6 +48,7 @@ target_link_libraries(stepit_camera
   Threads::Threads
   PRIVATE
   PkgConfig::GPHOTO2
+  PkgConfig::HTTPLIB
   JPEG::JPEG)
 
 ######################################################
@@ -53,6 +57,13 @@ target_link_libraries(stepit_camera
 add_executable(stepit_camera_node src/main.cpp)
 set_target_properties(stepit_camera_node PROPERTIES OUTPUT_NAME camera_node)
 target_link_libraries(stepit_camera_node PRIVATE stepit_camera)
+
+######################################################
+# The web server: the test page and the pictures, over HTTP.
+
+add_executable(stepit_camera_web_server src/web_server_main.cpp)
+set_target_properties(stepit_camera_web_server PROPERTIES OUTPUT_NAME web_server)
+target_link_libraries(stepit_camera_web_server PRIVATE stepit_camera)
 
 ######################################################
 # INSTALL
@@ -65,7 +76,7 @@ install(TARGETS stepit_camera
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin)
 
-install(TARGETS stepit_camera_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS stepit_camera_node stepit_camera_web_server DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME}/)
 

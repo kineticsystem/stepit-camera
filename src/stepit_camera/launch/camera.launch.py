@@ -22,14 +22,20 @@
 Start the camera driver. Pass fake:=true to run a fake camera, with no
 hardware, and stream:=true to start the live view straight away.
 
-For web pages, e.g. the StepIt UI, it also starts web_video_server, which
-serves the live view on port web_video_port (default 8081), and rosbridge,
-which serves the services and topics on port rosbridge_port (default 9091).
-Pass web_video:=false or rosbridge:=false to leave them out.
+For web pages, e.g. the test page of the camera, it also starts:
+
+- the web server, which serves the test page and the pictures over HTTP on
+  port web_port (default 8090);
+- web_video_server, which serves the live view on port web_video_port
+  (default 8081);
+- rosbridge, which serves the services and topics on port rosbridge_port
+  (default 9091).
+
+Pass web:=false, web_video:=false or rosbridge:=false to leave them out.
 
 This rosbridge runs here because only it knows the messages of the camera,
-stepit_camera_msgs. Its port is not 9090, the port of StepIt Commander's
-rosbridge, so that both can run on the same machine.
+stepit_camera_msgs. Its port is not rosbridge's default, 9090, so that it can
+run next to another rosbridge on the same machine.
 """
 
 from launch import LaunchDescription
@@ -63,6 +69,21 @@ def generate_launch_description():
                 ),
             },
         ],
+    )
+
+    # The test page at http://<host>:8090, and each saved picture at
+    # http://<host>:8090/pictures/<name>. It reads download_directory from the
+    # same file as the camera node.
+    web = Node(
+        package="stepit_camera",
+        executable="web_server",
+        name="web_server",
+        output="screen",
+        parameters=[
+            parameters,
+            {"port": ParameterValue(LaunchConfiguration("web_port"), value_type=int)},
+        ],
+        condition=IfCondition(LaunchConfiguration("web")),
     )
 
     # A page shows the live view with an <img> of
@@ -111,6 +132,16 @@ def generate_launch_description():
                 description="Start the live view as soon as the camera connects",
             ),
             DeclareLaunchArgument(
+                "web",
+                default_value="true",
+                description="Start the web server, for the test page and the pictures",
+            ),
+            DeclareLaunchArgument(
+                "web_port",
+                default_value="8090",
+                description="The HTTP port of the web server",
+            ),
+            DeclareLaunchArgument(
                 "web_video",
                 default_value="true",
                 description="Start web_video_server, to show the live view in web pages",
@@ -131,6 +162,7 @@ def generate_launch_description():
                 description="The WebSocket port of rosbridge",
             ),
             camera,
+            web,
             web_video,
             rosbridge,
         ]

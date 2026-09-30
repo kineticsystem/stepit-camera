@@ -47,6 +47,8 @@ namespace stepit_camera
  *   JPEG frames, while streaming.
  * - `~/picture` (stepit_camera_msgs/Picture): each picture the camera takes,
  *   downloaded as soon as it is reported, and saved into `download_directory`.
+ *   The message says where the file is, not what is in it: a node reads the
+ *   file, and a web page loads it from the web server.
  * - `~/start_streaming`, `~/stop_streaming` (std_srvs/Trigger): the live view.
  * - `~/get_settings` (stepit_camera_msgs/GetSettings): the current settings
  *   and the values they accept.

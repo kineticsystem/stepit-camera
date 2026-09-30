@@ -21,3 +21,7 @@ pictures/*
 
 # Local notes, not part of the project.
 task.md
+
+# The pnpm store of the test page's dependencies: pnpm puts it at the root of
+# the mount, i.e. here, in the container.
+.pnpm-store/

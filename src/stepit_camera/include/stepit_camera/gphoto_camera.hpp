@@ -38,8 +38,8 @@ namespace stepit_camera
 /**
  * @brief A camera connected over USB, driven through libgphoto2.
  *
- * It opens the first camera libgphoto2 finds, which is the only one on the
- * robot. See http://www.gphoto.org/proj/libgphoto2/support.php for the
+ * It opens the first camera libgphoto2 finds: the driver drives one camera.
+ * See http://www.gphoto.org/proj/libgphoto2/support.php for the
  * supported models: the Canon EOS 5D Mark II supports capture, live view and
  * configuration.
  */

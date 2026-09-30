@@ -14,6 +14,7 @@
 - [One Thread Owns the Camera](#one-thread-owns-the-camera)
 - [Streaming](#streaming)
 - [Downloading the Pictures](#downloading-the-pictures)
+- [The Web Server](#the-web-server)
 - [The Exposure](#the-exposure)
 - [Losing the Camera](#losing-the-camera)
 - [The Container](#the-container)
@@ -29,33 +30,81 @@ It follows one idea: **the camera is a device that answers one request at a time
 
 ## The Big Picture
 
-The camera is fired by an external precision device, through the remote shutter release cable. The driver does not take the pictures itself: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings. The one exception is a test shot, `~/take_picture`, which releases the shutter over USB to check the framing and the exposure.
+The camera is fired by an external device, plugged into its remote shutter release socket, or by its own shutter button. The driver does not decide when to take a picture: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings. The one exception is a test shot, `~/take_picture`, which releases the shutter over USB to check the framing and the exposure.
 
 ```mermaid
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 28
+    messageMargin: 40
+    actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
-flowchart LR
+flowchart TB
     Trigger["External device"] -- "shutter release cable" --> Camera["Canon EOS 5D Mark II"]
-    Camera -- "USB, PTP" --> GPhoto["libgphoto2"]
+    Camera -- "USB, PTP" --> GPhoto
     subgraph Node["camera node"]
-        GPhoto --> Driver["CameraDriver<br/>its own thread"]
+        GPhoto["libgphoto2"] --> Driver["CameraDriver<br/>its own thread"]
         Driver --> ROS["CameraNode<br/>topics, services, parameters"]
     end
-    ROS -- "preview/compressed<br/>picture" --> Clients["Other nodes<br/>rqt_image_view"]
-    Clients -- "start_streaming, stop_streaming<br/>get_settings, take_picture, parameters" --> ROS
+    ROS <-- "topics, services<br/>parameters" --> Clients["Other nodes<br/>rqt_image_view"]
     ROS -- "saves" --> Folder["pictures/"]
     ROS -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
     ROS <--> Bridge["rosbridge<br/>port 9091"]
-    Video --> Browser["Web pages<br/>StepIt UI"]
-    Bridge <--> Browser
+    Folder --> Web["web server<br/>port 8090"]
+    Page["web/dist<br/>the test page"] --> Web
+    Video -- "MJPEG" --> Browser["Web pages<br/>the test page"]
+    Bridge <-- "services, parameters<br/>picture" --> Browser
+    Web -- "the page, the pictures" --> Browser
+
+    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
 ```
 
 The node's interface:
@@ -63,25 +112,27 @@ The node's interface:
 | Name | Type | What it does |
 |---|---|---|
 | `~/preview/compressed` | `sensor_msgs/CompressedImage` topic | The live view, as JPEG frames, while streaming. |
-| `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, with its content and where it was saved. |
+| `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, once saved: its name, and where the file is. |
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
 | `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
 
-The launch file also starts, for web pages, [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, rather than the one of StepIt Commander on port 9090, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only.
+The launch file also starts, for web pages, the web server of the package, which serves the test page and the saved pictures over HTTP on port 8090 (see [The Web Server](#the-web-server)), [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only. It is not on rosbridge's default port, 9090, so that it can run next to another rosbridge on the same machine.
 
 ## The Packages
 
-The split follows the [StepIt Commander](https://github.com/kineticsystem/stepit-commander): the code, its interfaces and its tests live in separate packages.
+The code, its interfaces and its tests live in separate packages, so that a node that only talks to the camera needs only `stepit_camera_msgs`, and the tests can depend on anything without the driver doing so.
 
 | Package | Role |
 |---|---|
 | `stepit_camera_msgs` | The message of a picture, and the service reading the settings. No code. |
-| `stepit_camera` | The driver: a library holding every class, the node executable, its parameters and its launch file. |
+| `stepit_camera` | The driver: a library holding every class, the node and web server executables, their parameters and the launch file. |
 | `stepit_camera_tests` | All tests, run against the fake camera. The other packages carry none. |
 
-The library is shared rather than static, so that its private dependencies, libgphoto2 and libjpeg, do not leak into the packages that link it, i.e. the tests.
+The library is shared rather than static, so that its private dependencies, libgphoto2, libjpeg and cpp-httplib, do not leak into the packages that link it, i.e. the tests.
+
+The test page, in [`web`](../web), is not a ROS package: a `COLCON_IGNORE` keeps colcon out of it, and the scripts in `bin` build and test it with pnpm. See [WEB_PAGE.md](WEB_PAGE.md).
 
 ## The Classes
 
@@ -89,12 +140,56 @@ The library is shared rather than static, so that its private dependencies, libg
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 28
+    messageMargin: 40
+    actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 classDiagram
     class Camera {
@@ -124,7 +219,7 @@ The settings are named as libgphoto2 names them, e.g. `shutterspeed`, which is w
 
 ### GPhotoCamera
 
-[`gphoto_camera.cpp`](../src/stepit_camera/src/gphoto_camera.cpp) implements the interface with libgphoto2. It opens the first camera libgphoto2 detects, since there is only one on the robot. It is the only file that includes the libgphoto2 headers.
+[`gphoto_camera.cpp`](../src/stepit_camera/src/gphoto_camera.cpp) implements the interface with libgphoto2. It opens the first camera libgphoto2 detects: the driver drives one camera. It is the only file that includes the libgphoto2 headers.
 
 A few details that matter on a Canon EOS:
 
@@ -158,12 +253,56 @@ libgphoto2 is not thread safe, and a camera answers one request at a time over U
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 28
+    messageMargin: 40
+    actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
     primaryBorderColor: "#2c5590"
     lineColor: "#8b949e"
     textColor: "#4d86d6"
+    actorBkg: "#3b6fb6"
+    actorBorder: "#2c5590"
+    actorTextColor: "#ffffff"
+    actorLineColor: "#8b949e"
+    signalColor: "#8b949e"
+    signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 flowchart TD
     Start{"Connected?"} -- no --> Open["Open the camera"]
@@ -175,6 +314,8 @@ flowchart TD
     Frame -- no --> Wait["Wait for new files<br/>until the next frame is due"]
     Wait -- "files" --> Download["Download each one<br/>on_picture"] --> Start
     Wait -- "time is up" --> Start
+
+    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
 ```
 
 Any other thread that needs the camera, e.g. the node changing the ISO, queues a **task** with `CameraDriver::run()`, and waits for its result. A task is a function of the camera wrapped in a `std::packaged_task`, so its return value and its exceptions reach the caller as if it had called the camera itself. The loop runs the queued tasks at every turn, and a turn lasts at most `poll_period` (100 ms) when not streaming, or until the next frame when streaming, so a task never waits long.
@@ -193,6 +334,21 @@ The frames are published as they come out of the camera, JPEG images in a `senso
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 28
+    messageMargin: 40
+    actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -205,6 +361,29 @@ config:
     actorLineColor: "#8b949e"
     signalColor: "#8b949e"
     signalTextColor: "#4d86d6"
+    noteBkgColor: "#3b6fb6"
+    noteTextColor: "#ffffff"
+    noteBorderColor: "#2c5590"
+    secondaryColor: "#3b6fb6"
+    tertiaryColor: "#3b6fb6"
+    clusterBkg: "transparent"
+    clusterBorder: "#8b949e"
+    titleColor: "#4d86d6"
+    edgeLabelBackground: "#3b6fb6"
+    classText: "#ffffff"
+    labelBoxBkgColor: "#3b6fb6"
+    labelBoxBorderColor: "#2c5590"
+    labelTextColor: "#ffffff"
+    loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 sequenceDiagram
     participant Device as External device
@@ -230,7 +409,20 @@ When the camera connects, the node sets its `capturetarget`:
 - **Memory card**, with `keep_on_camera` true, the default. Every picture stays on the card as well: nothing is lost if the computer fails to download it.
 - **Internal RAM**, with `keep_on_camera` false. The pictures only live in the camera's memory until they are downloaded, and the driver deletes them after downloading them, so the card never fills up.
 
-The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture with its content, so that a node on another computer receives it too.
+The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture on `~/picture`, with its path. A picture that cannot be saved, e.g. on a full disk, is not published: the error is logged, and the picture is still on the memory card, unless `keep_on_camera` is false. For the same reason, the node refuses to start with an empty `download_directory`.
+
+## The Web Server
+
+`web_server` is a second executable of the package, launched next to the node, with [cpp-httplib](https://github.com/yhirose/cpp-httplib). `WebServer` serves two folders:
+
+- `/`: the test page, `web/dist`, as `build` bundles it;
+- `/pictures/<name>`: the pictures, `download_directory`, read from the same `camera.yaml` as the node.
+
+It serves the files as they are on disk, with `Range` requests, so that the test page reads only the JPEG preview of a RAW file: its location is in the first 64 KB of the file, and the preview of a 5D Mark II is about 1.4 MB of a 30 MB file. Every response allows any origin, and exposes `Content-Range`, so that a page served elsewhere, e.g. by another application, can load the pictures too.
+
+The server is a process of its own, rather than a thread of the camera node: the node's threads stay those that own the camera and spin ROS, and the server can be left out with `web:=false`. It is a ROS node only to read its parameters from the same file and be launched the same way; it has no topic nor service.
+
+Two details of cpp-httplib matter. It sets `SO_REUSEPORT` by default, which lets a second server take the same port and share the requests with the first one, e.g. a server left over from a failed launch: `WebServer` sets `SO_REUSEADDR` only, so that such a server fails with a clear message. And its file extensions are case sensitive, while a Canon names its files in capitals, e.g. `IMG_0001.CR2`: both spellings are mapped.
 
 ## The Exposure
 
@@ -271,10 +463,11 @@ When the node stops, the driver switches the live view off before closing the ca
 
 ## The Container
 
-The container copies those of the other StepIt projects: the same Dockerfile structure, the same `dock.sh`, the same scripts in `bin`, and the same DDS configuration, so that the camera node and the robot see each other's topics. What is specific to the camera:
+The container is defined in `docker/docker-compose.yml`, driven by `dock.sh`, with the scripts in `bin` on its `PATH`. It shares the host's network and uses Cyclone DDS, configured in `cyclonedds.xml`, so that the camera node sees the topics of ROS2 nodes running on the host or in other containers with the same settings. What is specific to the camera:
 
-- The container is **privileged and mounts `/dev`**, like the robot's own container for its serial port. libgphoto2 opens the camera through `/dev/bus/usb`, and a camera that is unplugged and plugged in again comes back under a new device number, which a single mounted device would miss.
+- The container is **privileged and mounts `/dev`**. libgphoto2 opens the camera through `/dev/bus/usb`, and a camera that is unplugged and plugged in again comes back under a new device number, which a single mounted device would miss.
 - The image installs `libgphoto2-dev` and `libjpeg-dev`, and the `gphoto2` command line tool, to check the camera by hand.
+- The image installs `libcpp-httplib-dev` for the web server, and Node.js with pnpm to build the test page. The container shares the host's network, so the page's development server uses port 5174 rather than Vite's default, 5173, which another development server on the host may take.
 - The pictures go to `~/ws/pictures` in the container, which is the folder [`pictures`](../pictures) of the repo on the host. The folder is in the repo, with its content ignored by git, so that Docker never creates it as root.
 
 ## Tests
@@ -287,6 +480,9 @@ The tests run against the fake camera, so they need no hardware:
 | `test_fake_camera` | The fake camera behaves as the driver expects a camera to: live view, settings, events, unplugging. |
 | `test_camera_driver` | The loop: streaming on request and at the requested rate, downloading while streaming, deleting after download, tasks and their errors, reconnecting, stopping cleanly. |
 | `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters. |
+| `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, nothing served outside the two folders, a port already in use. |
+
+The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#tests).
 
 `GPhotoCamera` has no test of its own: it needs a real camera. Check it by hand, with the camera plugged in, following the README.
 
@@ -300,14 +496,16 @@ The tests run against the fake camera, so they need no hardware:
 
 ## Design Decisions and Trade-offs
 
-**libgphoto2, not Canon's SDK.** Canon's EDSDK runs on Ubuntu, but does not support the 5D Mark II, and it is proprietary. libgphoto2 supports the 5D Mark II with capture, live view and configuration. It is LGPL, which an MIT project can link dynamically. See the research in [canon_driver.md](canon_driver.md).
+**libgphoto2, not Canon's SDK.** Canon's EDSDK runs on Ubuntu, but does not support the 5D Mark II, and it is proprietary. libgphoto2 supports the 5D Mark II with capture, live view and configuration. It is LGPL, which an MIT project can link dynamically.
 
 **One node, not `gphoto2` piped into a virtual webcam.** Piping `gphoto2 --capture-movie` into `v4l2loopback` gives a live view with no code, but that process holds the camera, so nothing else can change a setting or download a picture meanwhile.
 
 **The frames are not decoded.** The camera already sends JPEG images, so publishing them as they come costs nothing. A node that needs raw pixels can subscribe through `image_transport`, which decodes them.
 
-**The driver does not trigger the camera.** The external device fires it with a precision that a USB command cannot match. The driver only watches for the pictures, which is also why the stamp of a picture is the time of its download, not of the shot. A test shot is the one exception: it only checks the framing and the exposure, so its timing does not matter, and its picture comes the same way as the others.
+**The driver does not trigger the camera.** A device on the remote shutter release fires it with a timing that a USB command cannot match. The driver only watches for the pictures, which is also why the stamp of a picture is the time of its download, not of the shot. A test shot is the one exception: it only checks the framing and the exposure, so its timing does not matter, and its picture comes the same way as the others.
 
 **Parameters for the exposure, services for the live view.** A setting is a state, which `ros2 param`, `rqt_reconfigure` and launch files already know how to set, save and restore. Starting the live view is an action, which a service expresses better, and it returns at once.
 
-**Pictures are published with their content.** A 5D Mark II RAW file is about 25 MB, which is heavy for DDS over a network. The content makes the picture available to any node, even on another computer; a node on the same computer can read `path` instead.
+**Pictures are published as a path, never as their content.** A 5D Mark II RAW file is about 30 MB. On DDS, it would compete with every other node on the network for a moment after each shot, which a node with deadlines of its own, e.g. a motor controller, cannot afford. Through rosbridge, it would reach a browser as about 40 MB of base64 text in JSON, ahead of every service call on the same WebSocket. So `~/picture` says where the file is: a node on the same computer reads it, and any other client loads it over HTTP from the web server, with ranges. The price is that a node on another computer needs HTTP, not only ROS, to get a picture.
+
+**HTTP for the pictures, in a server of the package.** A browser loads a file over HTTP in binary, in the background, with ranges, and gives it a URL it can link to. web_video_server only serves topics, and rosbridge only speaks JSON, so the package has its own server. It also serves the test page, so that the page and the pictures share an origin, and Node.js is needed only to build the page, not to run it.

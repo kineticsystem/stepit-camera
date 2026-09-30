@@ -194,7 +194,7 @@ TEST_F(CameraNodeTest, TheLiveViewCanStartWithTheNode)
   EXPECT_TRUE(waitUntil([this] { return frames_ >= 3; }));
 }
 
-TEST_F(CameraNodeTest, APictureIsPublishedAndSaved)
+TEST_F(CameraNodeTest, APictureIsSavedAndPublishedWithItsPath)
 {
   start();
 
@@ -207,10 +207,21 @@ TEST_F(CameraNodeTest, APictureIsPublishedAndSaved)
   EXPECT_EQ(picture->header.frame_id, "camera");
   EXPECT_EQ(fs::path(picture->path), folder_ / "IMG_0001.JPG");
 
+  // The file is saved before the message says where it is.
   std::ifstream file(picture->path, std::ios::binary);
   const std::vector<uint8_t> saved{ std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
-  EXPECT_EQ(saved, picture->data);
-  EXPECT_GT(saved.size(), 1000u);
+  ASSERT_GT(saved.size(), 1000u);
+  EXPECT_EQ(saved[0], 0xff);
+  EXPECT_EQ(saved[1], 0xd8);
+}
+
+TEST_F(CameraNodeTest, TheNodeNeedsAFolderForThePictures)
+{
+  rclcpp::NodeOptions options;
+  options.arguments({ "--ros-args", "-r", "__ns:=" + namespace_ });
+  options.parameter_overrides({ rclcpp::Parameter("fake_camera", true), rclcpp::Parameter("download_directory", "") });
+
+  EXPECT_THROW(CameraNode{ options }, std::invalid_argument);
 }
 
 TEST_F(CameraNodeTest, TheExposureIsSetThroughParameters)
