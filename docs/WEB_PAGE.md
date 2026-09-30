@@ -29,6 +29,7 @@ The page is a single-page React application, built into `web/dist` and served as
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
   flowchart:
     padding: 20
     nodeSpacing: 40
@@ -38,9 +39,11 @@ config:
   sequence:
     boxMargin: 12
     boxTextMargin: 8
-    noteMargin: 16
+    noteMargin: 28
     messageMargin: 40
     actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -142,6 +145,7 @@ The driver only sends frames while streaming is on. During a test shot, no frame
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
   flowchart:
     padding: 20
     nodeSpacing: 40
@@ -151,9 +155,11 @@ config:
   sequence:
     boxMargin: 12
     boxTextMargin: 8
-    noteMargin: 16
+    noteMargin: 28
     messageMargin: 40
     actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"

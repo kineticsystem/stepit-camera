@@ -36,6 +36,7 @@ The camera is fired by an external device, plugged into its remote shutter relea
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
   flowchart:
     padding: 20
     nodeSpacing: 40
@@ -45,9 +46,11 @@ config:
   sequence:
     boxMargin: 12
     boxTextMargin: 8
-    noteMargin: 16
+    noteMargin: 28
     messageMargin: 40
     actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -137,6 +140,7 @@ The test page, in [`web`](../web), is not a ROS package: a `COLCON_IGNORE` keeps
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
   flowchart:
     padding: 20
     nodeSpacing: 40
@@ -146,9 +150,11 @@ config:
   sequence:
     boxMargin: 12
     boxTextMargin: 8
-    noteMargin: 16
+    noteMargin: 28
     messageMargin: 40
     actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -247,6 +253,7 @@ libgphoto2 is not thread safe, and a camera answers one request at a time over U
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
   flowchart:
     padding: 20
     nodeSpacing: 40
@@ -256,9 +263,11 @@ config:
   sequence:
     boxMargin: 12
     boxTextMargin: 8
-    noteMargin: 16
+    noteMargin: 28
     messageMargin: 40
     actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -325,6 +334,7 @@ The frames are published as they come out of the camera, JPEG images in a `senso
 ---
 config:
   theme: base
+  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
   flowchart:
     padding: 20
     nodeSpacing: 40
@@ -334,9 +344,11 @@ config:
   sequence:
     boxMargin: 12
     boxTextMargin: 8
-    noteMargin: 16
+    noteMargin: 28
     messageMargin: 40
     actorMargin: 60
+    labelBoxWidth: 56
+    labelBoxHeight: 28
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
