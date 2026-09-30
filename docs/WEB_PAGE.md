@@ -29,6 +29,18 @@ The page is a single-page React application, built into `web/dist` and served as
 ---
 config:
   theme: base
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 16
+    messageMargin: 40
+    actorMargin: 60
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -55,6 +67,15 @@ config:
     labelBoxBorderColor: "#2c5590"
     labelTextColor: "#ffffff"
     loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 flowchart TB
     subgraph Container["StepIt Camera container"]
@@ -121,6 +142,18 @@ The driver only sends frames while streaming is on. During a test shot, no frame
 ---
 config:
   theme: base
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 16
+    messageMargin: 40
+    actorMargin: 60
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -147,6 +180,15 @@ config:
     labelBoxBorderColor: "#2c5590"
     labelTextColor: "#ffffff"
     loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 sequenceDiagram
     participant UI as Page

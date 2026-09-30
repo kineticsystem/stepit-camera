@@ -36,6 +36,18 @@ The camera is fired by an external device, plugged into its remote shutter relea
 ---
 config:
   theme: base
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 16
+    messageMargin: 40
+    actorMargin: 60
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -62,6 +74,15 @@ config:
     labelBoxBorderColor: "#2c5590"
     labelTextColor: "#ffffff"
     loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 flowchart TB
     Trigger["External device"] -- "shutter release cable" --> Camera["Canon EOS 5D Mark II"]
@@ -116,6 +137,18 @@ The test page, in [`web`](../web), is not a ROS package: a `COLCON_IGNORE` keeps
 ---
 config:
   theme: base
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 16
+    messageMargin: 40
+    actorMargin: 60
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -142,6 +175,15 @@ config:
     labelBoxBorderColor: "#2c5590"
     labelTextColor: "#ffffff"
     loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 classDiagram
     class Camera {
@@ -205,6 +247,18 @@ libgphoto2 is not thread safe, and a camera answers one request at a time over U
 ---
 config:
   theme: base
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 16
+    messageMargin: 40
+    actorMargin: 60
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -231,6 +285,15 @@ config:
     labelBoxBorderColor: "#2c5590"
     labelTextColor: "#ffffff"
     loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 flowchart TD
     Start{"Connected?"} -- no --> Open["Open the camera"]
@@ -262,6 +325,18 @@ The frames are published as they come out of the camera, JPEG images in a `senso
 ---
 config:
   theme: base
+  flowchart:
+    padding: 20
+    nodeSpacing: 40
+    rankSpacing: 50
+  class:
+    padding: 16
+  sequence:
+    boxMargin: 12
+    boxTextMargin: 8
+    noteMargin: 16
+    messageMargin: 40
+    actorMargin: 60
   themeVariables:
     primaryColor: "#3b6fb6"
     primaryTextColor: "#ffffff"
@@ -288,6 +363,15 @@ config:
     labelBoxBorderColor: "#2c5590"
     labelTextColor: "#ffffff"
     loopTextColor: "#4d86d6"
+    mainBkg: "#3b6fb6"
+    nodeBorder: "#2c5590"
+    nodeTextColor: "#ffffff"
+    secondaryBorderColor: "#2c5590"
+    secondaryTextColor: "#ffffff"
+    tertiaryBorderColor: "#2c5590"
+    tertiaryTextColor: "#ffffff"
+    errorBkgColor: "#3b6fb6"
+    errorTextColor: "#ffffff"
 ---
 sequenceDiagram
     participant Device as External device
