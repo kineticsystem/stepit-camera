@@ -7,9 +7,9 @@ export type Theme = 'auto' | 'light' | 'dark';
 
 export interface Settings {
   theme: Theme;
-  /** The camera's rosbridge, e.g. ws://robot:9091; empty for port 9091 of the UI's host. */
+  /** The camera's rosbridge, e.g. ws://camera-pc:9091; empty for port 9091 of the page's host. */
   cameraRosbridgeUrl: string;
-  /** The camera's web_video_server, e.g. http://robot:8081; empty for port 8081 of the UI's host. */
+  /** The camera's web_video_server, e.g. http://camera-pc:8081; empty for port 8081 of the page's host. */
   cameraVideoUrl: string;
   /** The name of the camera node, e.g. /camera. */
   cameraNode: string;
@@ -43,7 +43,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
 }));
 
-/** The host that served the page: the robot, usually, where rosbridge and web_video_server run too. */
+/** The host that served the page: the camera's computer, usually, where rosbridge and web_video_server run too. */
 const pageHost = () => (typeof location === 'undefined' ? '' : location.hostname) || 'localhost';
 
 export function cameraRosbridgeUrl(settings: Pick<Settings, 'cameraRosbridgeUrl'>): string {

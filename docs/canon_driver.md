@@ -17,7 +17,7 @@
 
 ## Introduction
 
-This document collects what we found when looking for a ROS2 package to control a Canon EOS 5D Mark II from a robot. We searched GitHub and the web in September 2026.
+This document collects what we found when looking for a ROS2 package to control a Canon EOS 5D Mark II from ROS2. We searched GitHub and the web in September 2026.
 
 Something similar already exists for Windows: [digiCamControl](https://digicamcontrol.com/). We want the same features inside ROS2.
 

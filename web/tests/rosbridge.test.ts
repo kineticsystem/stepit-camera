@@ -14,7 +14,7 @@ describe('the rosbridge client', () => {
   });
 
   it('calls a service and returns its response', async () => {
-    const ros = new Rosbridge('ws://robot:9090');
+    const ros = new Rosbridge('ws://camera-pc:9090');
     FakeSocket.last.open();
     const response = ros.callService('/camera/take_picture', 'std_srvs/srv/Trigger');
     expect(FakeSocket.last.lastSent('call_service')).toMatchObject({
@@ -25,7 +25,7 @@ describe('the rosbridge client', () => {
   });
 
   it('fails a call that rosbridge could not make, or that is not answered', async () => {
-    const ros = new Rosbridge('ws://robot:9090', { callTimeout: 1000 });
+    const ros = new Rosbridge('ws://camera-pc:9090', { callTimeout: 1000 });
     FakeSocket.last.open();
     const unknown = ros.callService('/nobody', 'std_srvs/srv/Trigger');
     FakeSocket.last.respond('Service /nobody does not exist', false);
@@ -37,7 +37,7 @@ describe('the rosbridge client', () => {
   });
 
   it('fails a call at once when not connected, and the calls in flight when the connection drops', async () => {
-    const ros = new Rosbridge('ws://robot:9090');
+    const ros = new Rosbridge('ws://camera-pc:9090');
     await expect(ros.callService('/a', 'std_srvs/srv/Trigger')).rejects.toThrow('Not connected');
 
     FakeSocket.last.open();
@@ -47,7 +47,7 @@ describe('the rosbridge client', () => {
   });
 
   it('subscribes once per topic, and unsubscribes with the last listener', () => {
-    const ros = new Rosbridge('ws://robot:9090');
+    const ros = new Rosbridge('ws://camera-pc:9090');
     FakeSocket.last.open();
     const first = vi.fn();
     const second = vi.fn();
@@ -70,7 +70,7 @@ describe('the rosbridge client', () => {
   });
 
   it('puts a large message back together from its fragments', () => {
-    const ros = new Rosbridge('ws://robot:9090');
+    const ros = new Rosbridge('ws://camera-pc:9090');
     FakeSocket.last.open();
     const listener = vi.fn();
     ros.subscribe('/camera/picture', 'stepit_camera_msgs/msg/Picture', listener);
@@ -85,7 +85,7 @@ describe('the rosbridge client', () => {
 
   it('reconnects on its own, and subscribes again', () => {
     const statuses: Status[] = [];
-    const ros = new Rosbridge('ws://robot:9090', { reconnectDelay: 500 });
+    const ros = new Rosbridge('ws://camera-pc:9090', { reconnectDelay: 500 });
     ros.onStatus((s) => statuses.push(s));
     FakeSocket.last.open();
     ros.subscribe('/camera/picture', 'stepit_camera_msgs/msg/Picture', () => {});
@@ -100,7 +100,7 @@ describe('the rosbridge client', () => {
   });
 
   it('stays closed once closed', () => {
-    const ros = new Rosbridge('ws://robot:9090', { reconnectDelay: 500 });
+    const ros = new Rosbridge('ws://camera-pc:9090', { reconnectDelay: 500 });
     FakeSocket.last.open();
     ros.close();
     vi.advanceTimersByTime(5000);

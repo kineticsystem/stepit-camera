@@ -70,8 +70,8 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
 ## The test page (`web/`)
 
 See `docs/WEB_PAGE.md`. A React 19 + zustand + Vite page, TypeScript strict, tested with vitest;
-not a ROS package (`web/COLCON_IGNORE`). It only tests the camera: the rig's application is
-StepIt UI, another repo.
+not a ROS package (`web/COLCON_IGNORE`). It only tests the camera and the driver: keep it
+free of anything beyond them.
 
 - **The browser talks to the driver's servers directly**: `web_server` (8090) for the page
   and the pictures, rosbridge (9091) for services, parameters and `saved_picture`,
@@ -94,3 +94,5 @@ StepIt UI, another repo.
 - `cpplint` runs with `--linelength=121`; `clang-format` uses the repo `.clang-format`.
 - Update the README's parameter table and `docs/ARCHITECTURE.md` when the interface changes,
   and `docs/WEB_PAGE.md` when the page changes.
+- **The project stands on its own.** Docs, comments and code never mention the projects that
+  use it, e.g. a rig or another UI: describe the camera, the driver and their interfaces only.

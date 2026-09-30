@@ -11,7 +11,7 @@ describe('the camera over rosbridge', () => {
   beforeEach(() => {
     FakeSocket.all = [];
     vi.stubGlobal('WebSocket', FakeSocket);
-    camera = new Camera(new Rosbridge('ws://robot:9090'), '/camera');
+    camera = new Camera(new Rosbridge('ws://camera-pc:9090'), '/camera');
     socket = FakeSocket.last;
     socket.open();
   });
@@ -67,12 +67,12 @@ describe('the camera over rosbridge', () => {
 
   it('loads a saved picture from the web server, under the name it was saved with', () => {
     expect(Camera.pictureUrl('/home/developer/ws/pictures/IMG_0001_1.CR2')).toBe('/pictures/IMG_0001_1.CR2');
-    expect(Camera.pictureUrl('/p/IMG 1#.JPG', 'http://robot:8090')).toBe('http://robot:8090/pictures/IMG%201%23.JPG');
+    expect(Camera.pictureUrl('/p/IMG 1#.JPG', 'http://camera-pc:8090')).toBe('http://camera-pc:8090/pictures/IMG%201%23.JPG');
   });
 
   it('streams the live view through web_video_server, without decoding it', () => {
-    expect(Camera.streamUrl('http://robot:8081', '/camera')).toBe(
-      'http://robot:8081/stream?topic=/camera/preview&type=ros_compressed');
+    expect(Camera.streamUrl('http://camera-pc:8081', '/camera')).toBe(
+      'http://camera-pc:8081/stream?topic=/camera/preview&type=ros_compressed');
   });
 });
 

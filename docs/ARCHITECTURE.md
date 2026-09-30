@@ -30,7 +30,7 @@ It follows one idea: **the camera is a device that answers one request at a time
 
 ## The Big Picture
 
-The camera is fired by an external precision device, through the remote shutter release cable. The driver does not take the pictures itself: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings. The one exception is a test shot, `~/take_picture`, which releases the shutter over USB to check the framing and the exposure.
+The camera is fired by an external device, plugged into its remote shutter release socket, or by its own shutter button. The driver does not decide when to take a picture: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings. The one exception is a test shot, `~/take_picture`, which releases the shutter over USB to check the framing and the exposure.
 
 ```mermaid
 ---
@@ -95,11 +95,11 @@ The node's interface:
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
 | `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
 
-The launch file also starts, for web pages, the web server of the package, which serves the test page and the saved pictures over HTTP on port 8090 (see [The Web Server](#the-web-server)), [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, rather than the one of StepIt Commander on port 9090, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only.
+The launch file also starts, for web pages, the web server of the package, which serves the test page and the saved pictures over HTTP on port 8090 (see [The Web Server](#the-web-server)), [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only. It is not on rosbridge's default port, 9090, so that it can run next to another rosbridge on the same machine.
 
 ## The Packages
 
-The split follows the [StepIt Commander](https://github.com/kineticsystem/stepit-commander): the code, its interfaces and its tests live in separate packages.
+The code, its interfaces and its tests live in separate packages, so that a node that only talks to the camera needs only `stepit_camera_msgs`, and the tests can depend on anything without the driver doing so.
 
 | Package | Role |
 |---|---|
@@ -172,7 +172,7 @@ The settings are named as libgphoto2 names them, e.g. `shutterspeed`, which is w
 
 ### GPhotoCamera
 
-[`gphoto_camera.cpp`](../src/stepit_camera/src/gphoto_camera.cpp) implements the interface with libgphoto2. It opens the first camera libgphoto2 detects, since there is only one on the robot. It is the only file that includes the libgphoto2 headers.
+[`gphoto_camera.cpp`](../src/stepit_camera/src/gphoto_camera.cpp) implements the interface with libgphoto2. It opens the first camera libgphoto2 detects: the driver drives one camera. It is the only file that includes the libgphoto2 headers.
 
 A few details that matter on a Canon EOS:
 
@@ -323,7 +323,7 @@ The node saves a picture under its name on the camera, and never overwrites a fi
 - `/`: the test page, `web/dist`, as `build` bundles it;
 - `/pictures/<name>`: the pictures, `download_directory`, read from the same `camera.yaml` as the node.
 
-It serves the files as they are on disk, with `Range` requests, so that the test page reads only the JPEG preview of a RAW file: its location is in the first 64 KB of the file, and the preview of a 5D Mark II is about 1.4 MB of a 30 MB file. Every response allows any origin, and exposes `Content-Range`, so that a page served elsewhere, e.g. the application of the rig, can load the pictures too.
+It serves the files as they are on disk, with `Range` requests, so that the test page reads only the JPEG preview of a RAW file: its location is in the first 64 KB of the file, and the preview of a 5D Mark II is about 1.4 MB of a 30 MB file. Every response allows any origin, and exposes `Content-Range`, so that a page served elsewhere, e.g. by another application, can load the pictures too.
 
 The server is a process of its own, rather than a thread of the camera node: the node's threads stay those that own the camera and spin ROS, and the server can be left out with `web:=false`. It is a ROS node only to read its parameters from the same file and be launched the same way; it has no topic nor service.
 
@@ -368,11 +368,11 @@ When the node stops, the driver switches the live view off before closing the ca
 
 ## The Container
 
-The container copies those of the other StepIt projects: the same Dockerfile structure, the same `dock.sh`, the same scripts in `bin`, and the same DDS configuration, so that the camera node and the robot see each other's topics. What is specific to the camera:
+The container is defined in `docker/docker-compose.yml`, driven by `dock.sh`, with the scripts in `bin` on its `PATH`. It shares the host's network and uses Cyclone DDS, configured in `cyclonedds.xml`, so that the camera node sees the topics of ROS2 nodes running on the host or in other containers with the same settings. What is specific to the camera:
 
-- The container is **privileged and mounts `/dev`**, like the robot's own container for its serial port. libgphoto2 opens the camera through `/dev/bus/usb`, and a camera that is unplugged and plugged in again comes back under a new device number, which a single mounted device would miss.
+- The container is **privileged and mounts `/dev`**. libgphoto2 opens the camera through `/dev/bus/usb`, and a camera that is unplugged and plugged in again comes back under a new device number, which a single mounted device would miss.
 - The image installs `libgphoto2-dev` and `libjpeg-dev`, and the `gphoto2` command line tool, to check the camera by hand.
-- The image installs `libcpp-httplib-dev` for the web server, and Node.js with pnpm to build the test page. The container shares the host's network, so the page's development server uses port 5174 rather than Vite's 5173, which the StepIt Editor takes.
+- The image installs `libcpp-httplib-dev` for the web server, and Node.js with pnpm to build the test page. The container shares the host's network, so the page's development server uses port 5174 rather than Vite's default, 5173, which another development server on the host may take.
 - The pictures go to `~/ws/pictures` in the container, which is the folder [`pictures`](../pictures) of the repo on the host. The folder is in the repo, with its content ignored by git, so that Docker never creates it as root.
 
 ## Tests
@@ -407,7 +407,7 @@ The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#t
 
 **The frames are not decoded.** The camera already sends JPEG images, so publishing them as they come costs nothing. A node that needs raw pixels can subscribe through `image_transport`, which decodes them.
 
-**The driver does not trigger the camera.** The external device fires it with a precision that a USB command cannot match. The driver only watches for the pictures, which is also why the stamp of a picture is the time of its download, not of the shot. A test shot is the one exception: it only checks the framing and the exposure, so its timing does not matter, and its picture comes the same way as the others.
+**The driver does not trigger the camera.** A device on the remote shutter release fires it with a timing that a USB command cannot match. The driver only watches for the pictures, which is also why the stamp of a picture is the time of its download, not of the shot. A test shot is the one exception: it only checks the framing and the exposure, so its timing does not matter, and its picture comes the same way as the others.
 
 **Parameters for the exposure, services for the live view.** A setting is a state, which `ros2 param`, `rqt_reconfigure` and launch files already know how to set, save and restore. Starting the live view is an action, which a service expresses better, and it returns at once.
 

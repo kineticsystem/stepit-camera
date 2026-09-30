@@ -5,7 +5,7 @@
 - [Introduction](#introduction)
 - [The Big Picture](#the-big-picture)
 - [The Layers](#the-layers)
-- [Talking to the Robot](#talking-to-the-robot)
+- [Talking to the Driver](#talking-to-the-driver)
   - [The rosbridge Client](#the-rosbridge-client)
   - [One rosbridge per Module](#one-rosbridge-per-module)
 - [The Camera Section](#the-camera-section)
@@ -19,7 +19,7 @@
 
 This document explains how the test page of StepIt Camera, in [`web`](../web), is built, and where to start when we want to change something. It assumes we have read [The Test Page](../README.md#the-test-page) in the README and used the page once.
 
-The page tries the camera and the driver from a browser. It is not the application of the rig, [StepIt UI](https://github.com/kineticsystem/stepit-ui), which started from it; the code that talks to the camera, `ros/` and `camera/`, is a starting point for it.
+The page tries the camera and the driver from a browser. The code that talks to the driver, `ros/` and `camera/`, does not depend on the page, and can be reused by another web application.
 
 ## The Big Picture
 
@@ -77,27 +77,27 @@ The client is in `src/client`, in three layers, each depending only on those bel
 
 | Layer | Files | Knows about |
 |---|---|---|
-| Transport | `ros/rosbridge.ts`, `ros/connection.ts` | rosbridge's protocol. Nothing about the robot. |
+| Transport | `ros/rosbridge.ts`, `ros/connection.ts` | rosbridge's protocol. Nothing about the camera. |
 | Camera | `camera/camera.ts`, `camera/format.ts`, `camera/picture.ts`, `camera/raw.ts` | The camera's ROS interface, and its pictures on the web server. No React. |
 | State and views | `camera/store.ts`, `components/`, `App.tsx` | What the user sees and does. |
 
-`settings.ts` keeps the preferences of the browser in `localStorage`: the theme, and where the camera's rosbridge and web_video_server are. The state lives in [zustand](https://github.com/pmndrs/zustand) stores, as in the StepIt Editor.
+`settings.ts` keeps the preferences of the browser in `localStorage`: the theme, and where the camera's rosbridge and web_video_server are. The state lives in [zustand](https://github.com/pmndrs/zustand) stores.
 
-## Talking to the Robot
+## Talking to the Driver
 
 ### The rosbridge Client
 
-`Rosbridge` in [`rosbridge.ts`](../web/src/client/ros/rosbridge.ts) is a small client of the rosbridge protocol, written for the page rather than taken from `roslibjs`, like the StepIt Editor's:
+`Rosbridge` in [`rosbridge.ts`](../web/src/client/ros/rosbridge.ts) is a small client of the rosbridge protocol, written for the page rather than taken from `roslibjs`:
 
 - `callService()` sends `call_service` and resolves with the `service_response`. It fails at once when not connected, rather than waiting, so that a button can say it did not work; and it fails after a timeout, or when the connection drops.
 - `subscribe()` sends one `subscribe` per topic, whatever the number of listeners, and `unsubscribe` with the last one. The subscriptions survive a reconnection.
-- The connection comes back on its own, every 2 seconds, e.g. while the robot restarts.
+- The connection comes back on its own, every 2 seconds, e.g. while the driver restarts.
 - A message larger than rosbridge's fragment size, 10 MB, comes as `fragment` messages, which the client puts back together. The page no longer receives such messages, since the pictures come over HTTP, but the client still handles them.
 - A `uint8[]` field comes as base64 text: `decodeBytes()` turns it back into bytes.
 
 ### One rosbridge per Module
 
-A rosbridge can only handle the messages installed next to it. StepIt Commander's rosbridge, on port 9090, does not know `stepit_camera_msgs`, so the camera serves its own, on port 9091. [`connection.ts`](../web/src/client/ros/connection.ts) keeps one connection per URL, shared by whoever uses it, with its status, which the top of the page shows: the page has a single section, the camera, but an application with more modules would open one connection per module.
+A rosbridge can only handle the messages installed next to it, so the camera serves its own, which knows `stepit_camera_msgs`, on port 9091 rather than the default 9090, where another rosbridge may run. [`connection.ts`](../web/src/client/ros/connection.ts) keeps one connection per URL, shared by whoever uses it, with its status, which the top of the page shows: the page has a single section, the camera, but a page talking to several ROS2 systems, each with its own rosbridge, would open one connection per system.
 
 ## The Camera Section
 
@@ -107,7 +107,7 @@ A rosbridge can only handle the messages installed next to it. StepIt Commander'
 
 The live view is a plain `<img>` whose source is web_video_server's MJPEG stream, with `type=ros_compressed`: the camera's JPEG frames go to the browser as they are, never decoded. The topic is written unescaped in the URL, since web_video_server does not decode `%2F`.
 
-The driver only sends frames while streaming is on. During a test shot, no frame comes: the mirror goes down for the shot, and the driver is busy downloading the picture. The `<img>` keeps the last frame, which the page greys out from the click until the picture has come. The page only knows about its own test shots: a shot fired by the external device pauses the live view too, without greying it out. The live view is off when the page opens, so that opening the page does not raise the mirror: the Start and Stop buttons call `start_streaming` and `stop_streaming`. Once started, the page calls `start_streaming` again whenever rosbridge reconnects, e.g. after the driver restarted, since a new driver starts with the live view off.
+The driver only sends frames while streaming is on. During a test shot, no frame comes: the mirror goes down for the shot, and the driver is busy downloading the picture. The `<img>` keeps the last frame, which the page greys out from the click until the picture has come. The page only knows about its own test shots: a shot fired by an external device pauses the live view too, without greying it out. The live view is off when the page opens, so that opening the page does not raise the mirror: the Start and Stop buttons call `start_streaming` and `stop_streaming`. Once started, the page calls `start_streaming` again whenever rosbridge reconnects, e.g. after the driver restarted, since a new driver starts with the live view off.
 
 ### The Settings
 
@@ -173,7 +173,7 @@ A JPEG is shown from the server as it is. A browser cannot show a RAW file, but 
 
 ## Tests
 
-The tests, in [`tests`](../web/tests), run with vitest in Node.js, without a browser or a robot:
+The tests, in [`tests`](../web/tests), run with vitest in Node.js, without a browser or a camera:
 
 - [`fakeSocket.ts`](../web/tests/fakeSocket.ts) stands in for the WebSocket, records what the page sends, and answers as rosbridge would.
 - `rosbridge.test.ts` covers the protocol: calls, errors, timeouts, subscriptions, fragments and reconnections.
@@ -191,4 +191,4 @@ The components are thin and have no tests: check them in a browser, against the 
 
 **The pictures come over HTTP, not through rosbridge.** Through rosbridge, a 30 MB RAW file would be 40 MB of base64 text in JSON, in fragments, ahead of every service call on the same WebSocket, and decoded by JavaScript on the page's thread. Over HTTP, the browser loads it in binary, in the background, and only the part the page shows: see [The Test Shot](#the-test-shot).
 
-**Our own rosbridge client.** The page needs little of rosbridge, and the StepIt Editor already has its own client. `roslibjs` would bring more than we use, and callbacks rather than promises.
+**Our own rosbridge client.** The page needs little of rosbridge: a few calls and subscriptions. `roslibjs` would bring more than we use, and callbacks rather than promises.

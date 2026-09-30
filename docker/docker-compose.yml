@@ -2,8 +2,9 @@
 # CONTAINER_NAME and USER_UID/USER_GID.
 #
 # The container talks to the camera over USB, so it needs the host's devices.
-# Its network settings mirror the StepIt robot's own container so the two can
-# discover each other's ROS2 graph over DDS (see cyclonedds.xml).
+# It shares the host's network, so that it discovers the ROS2 nodes running on
+# the host or in other containers with the same DDS settings (see
+# cyclonedds.xml).
 
 services:
   dev:
@@ -22,7 +23,7 @@ services:
     # plugged in again while the container runs: it comes back under a new
     # device number.
     privileged: true
-    # Required for DDS discovery between this container and the robot's.
+    # Required for DDS discovery with the ROS2 nodes outside this container.
     network_mode: host
     volumes:
       # Relative paths resolve against this file's directory, so this is the

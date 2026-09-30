@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cameraRosbridgeUrl, cameraVideoUrl, useSettings, type Theme } from '../settings';
 import { GearIcon } from './icons';
 
-/** The preferences of this browser: the theme, and where the robot's servers are. */
+/** The preferences of this browser: the theme, and where the camera's servers are. */
 export function SettingsMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

@@ -34,8 +34,8 @@ For web pages, e.g. the test page of the camera, it also starts:
 Pass web:=false, web_video:=false or rosbridge:=false to leave them out.
 
 This rosbridge runs here because only it knows the messages of the camera,
-stepit_camera_msgs. Its port is not 9090, the port of StepIt Commander's
-rosbridge, so that both can run on the same machine.
+stepit_camera_msgs. Its port is not rosbridge's default, 9090, so that it can
+run next to another rosbridge on the same machine.
 """
 
 from launch import LaunchDescription

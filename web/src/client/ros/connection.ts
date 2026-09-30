@@ -1,6 +1,6 @@
-// The connections to rosbridge, one per URL, shared by the whole UI. Each
-// module of the robot serves its own rosbridge, the one that knows its
-// interfaces: the camera on port 9091, StepIt Commander on port 9090.
+// The connections to rosbridge, one per URL, shared by the whole page. A
+// rosbridge only knows the interfaces installed next to it, so each ROS2
+// system the page talks to has its own, e.g. the camera's on port 9091.
 
 import { create } from 'zustand';
 import { Rosbridge, type Status } from './rosbridge';

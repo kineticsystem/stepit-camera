@@ -43,7 +43,7 @@ namespace stepit_camera
  *   read only a part of a large file, e.g. the JPEG preview inside a RAW.
  *
  * Every response allows any origin, so that a page served by another server,
- * e.g. the final application of the rig, can read the pictures too.
+ * e.g. by another application, can read the pictures too.
  */
 class WebServer
 {

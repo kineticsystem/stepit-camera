@@ -1,6 +1,6 @@
 // A client of rosbridge: a WebSocket that speaks JSON, so the browser needs no
 // ROS. It calls services and subscribes to topics, and reconnects on its own
-// when the connection drops, e.g. while the robot restarts.
+// when the connection drops, e.g. while the driver restarts.
 //
 //   → call_service       a request                ← service_response
 //   → subscribe          a topic, once per topic  ← publish, for each message
@@ -47,7 +47,7 @@ export interface RosbridgeOptions {
 }
 
 let nextId = 0;
-const uniqueId = (what: string) => `stepit-ui-${what}-${Date.now()}-${nextId++}`;
+const uniqueId = (what: string) => `stepit-camera-${what}-${Date.now()}-${nextId++}`;
 
 export class Rosbridge {
   readonly url: string;

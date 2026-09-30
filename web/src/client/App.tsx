@@ -15,8 +15,8 @@ interface Section {
 }
 
 /**
- * The sections of the page, in the order of the navigation. The test page has
- * one, the camera; the application of the rig has one per part of the robot.
+ * The sections of the page, in the order of the navigation. There is one, the
+ * camera.
  */
 const SECTIONS: Section[] = [
   { id: 'camera', label: 'Camera', icon: <CameraIcon />, rosbridge: cameraRosbridgeUrl, page: () => <CameraPage /> },

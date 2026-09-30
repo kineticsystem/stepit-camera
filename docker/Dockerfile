@@ -1,6 +1,6 @@
-# Install Ubuntu 24.04 (ROS2 Jazzy) with user "developer", matching the
-# StepIt robot's own container so the two can discover each other's ROS2
-# graph over DDS when both run with --network host (see cyclonedds.xml).
+# Install Ubuntu 24.04 (ROS2 Jazzy) with user "developer". With --network host
+# and Cyclone DDS (see cyclonedds.xml), the camera node discovers the ROS2
+# nodes of the host and of other containers with the same settings.
 
 FROM ros:jazzy-ros-base
 
@@ -89,7 +89,7 @@ COPY --chown=developer:developer cyclonedds.xml /home/developer/.ros
 
 ENV HOME=/home/developer
 
-# The DDS configuration, matching the robot's own container. These are ENV
+# The DDS configuration, see cyclonedds.xml. These are ENV
 # rather than exports in the bashrc so that they also apply to non-interactive
 # commands, e.g. `docker exec <container-name> ros2 topic list`. Note the path
 # has to be spelled out: nothing expands a ~ in an ENV.
