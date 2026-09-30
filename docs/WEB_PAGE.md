@@ -107,7 +107,7 @@ A rosbridge can only handle the messages installed next to it. StepIt Commander'
 
 The live view is a plain `<img>` whose source is web_video_server's MJPEG stream, with `type=ros_compressed`: the camera's JPEG frames go to the browser as they are, never decoded. The topic is written unescaped in the URL, since web_video_server does not decode `%2F`.
 
-The driver only sends frames while streaming is on. During a test shot, no frame comes: the mirror goes down for the shot, and the driver is busy downloading the picture. The `<img>` keeps the last frame, which the page greys out from the click until the picture has come. The page only knows about its own test shots: a shot fired by the external device pauses the live view too, without greying it out. The page calls `start_streaming` when it connects, if the live view was on when the page was last used, and the Start and Stop buttons call `start_streaming` and `stop_streaming`.
+The driver only sends frames while streaming is on. During a test shot, no frame comes: the mirror goes down for the shot, and the driver is busy downloading the picture. The `<img>` keeps the last frame, which the page greys out from the click until the picture has come. The page only knows about its own test shots: a shot fired by the external device pauses the live view too, without greying it out. The live view is off when the page opens, so that opening the page does not raise the mirror: the Start and Stop buttons call `start_streaming` and `stop_streaming`. Once started, the page calls `start_streaming` again whenever rosbridge reconnects, e.g. after the driver restarted, since a new driver starts with the live view off.
 
 ### The Settings
 

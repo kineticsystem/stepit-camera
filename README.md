@@ -227,7 +227,7 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 
 The test page, in [`web`](web), is a web page to try the camera and the driver from a browser. It is served by the driver's web server, on <http://localhost:8090>, once `build` has built it:
 
-- **Live view** (left): what the camera sees, about 10 frames per second. **Stop** switches the live view off, which lowers the mirror; **Start** switches it on again. The page remembers the choice, and starts the live view when it opens.
+- **Live view** (left): what the camera sees, about 10 frames per second. It is off when the page opens: **Start** switches it on, and **Stop** switches it off again, which lowers the mirror. Once started, it starts again by itself if the driver restarts.
 - **Settings** (right): the ISO, the shutter speed, the aperture, the white balance and the exposure compensation, each with the values the camera accepts right now. These depend on the mode dial and on the lens, see [Prepare the Camera](#prepare-the-camera); a setting the camera does not let us change is greyed out. A change made on the camera itself shows up within a few seconds.
 - **Test shot**: releases the shutter and shows the picture, once saved. A JPEG is shown as it is; a RAW file is shown through the JPEG preview it carries, which the page reads from the file without loading the rest of it. The name of the file downloads it whole. The live view pauses for the shot, since the mirror moves: the last frame stays, greyed out, until the picture has come.
 

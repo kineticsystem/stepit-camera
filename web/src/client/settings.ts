@@ -13,12 +13,10 @@ export interface Settings {
   cameraVideoUrl: string;
   /** The name of the camera node, e.g. /camera. */
   cameraNode: string;
-  /** Whether the live view was on when the page was last used: it starts again with the page. */
-  liveView: boolean;
 }
 
 const DEFAULTS: Settings = {
-  theme: 'auto', cameraRosbridgeUrl: '', cameraVideoUrl: '', cameraNode: '/camera', liveView: true,
+  theme: 'auto', cameraRosbridgeUrl: '', cameraVideoUrl: '', cameraNode: '/camera',
 };
 const KEY = 'stepit.settings';
 

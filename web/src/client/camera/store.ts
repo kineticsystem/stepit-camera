@@ -86,7 +86,6 @@ export const useCamera = create<CameraState>((set, get) => ({
   },
 
   async setStreaming(on) {
-    useSettings.getState().update({ liveView: on });
     set({ streaming: on, streamError: undefined });
     try {
       await (on ? camera().startStreaming() : camera().stopStreaming());
@@ -163,7 +162,9 @@ export function followCamera(): () => void {
   const url = () => cameraRosbridgeUrl(useSettings.getState());
   const connected = () => {
     void useCamera.getState().refresh();
-    if (useSettings.getState().liveView) void useCamera.getState().setStreaming(true);
+    // The live view is off when the page opens. Once started, it is started
+    // again after a reconnection, e.g. when the driver restarted.
+    if (useCamera.getState().streaming) void useCamera.getState().setStreaming(true);
   };
   let stopFollowing = follow(url());
   function follow(to: string) {
