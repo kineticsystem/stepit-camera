@@ -77,7 +77,7 @@ flowchart TB
     Folder --> Web["web server<br/>port 8090"]
     Page["web/dist<br/>the test page"] --> Web
     Video -- "MJPEG" --> Browser["Web pages<br/>the test page"]
-    Bridge <-- "services, parameters<br/>saved_picture" --> Browser
+    Bridge <-- "services, parameters<br/>picture" --> Browser
     Web -- "the page, the pictures" --> Browser
 
     classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
@@ -88,8 +88,7 @@ The node's interface:
 | Name | Type | What it does |
 |---|---|---|
 | `~/preview/compressed` | `sensor_msgs/CompressedImage` topic | The live view, as JPEG frames, while streaming. |
-| `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, with its content and where it was saved. |
-| `~/saved_picture` | `stepit_camera_msgs/Picture` topic | Each picture once saved, without its content, for whoever can read the file: a node on the same computer, or a web page through the web server. |
+| `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, once saved: its name, and where the file is. |
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
@@ -314,7 +313,7 @@ When the camera connects, the node sets its `capturetarget`:
 - **Memory card**, with `keep_on_camera` true, the default. Every picture stays on the card as well: nothing is lost if the computer fails to download it.
 - **Internal RAM**, with `keep_on_camera` false. The pictures only live in the camera's memory until they are downloaded, and the driver deletes them after downloading them, so the card never fills up.
 
-The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture twice: on `~/saved_picture` without its content, and on `~/picture` with it, so that a node on another computer receives it too. A picture that could not be saved only comes on `~/picture`.
+The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture on `~/picture`, with its path. A picture that cannot be saved, e.g. on a full disk, is not published: the error is logged, and the picture is still on the memory card, unless `keep_on_camera` is false. For the same reason, the node refuses to start with an empty `download_directory`.
 
 ## The Web Server
 
@@ -411,6 +410,6 @@ The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#t
 
 **Parameters for the exposure, services for the live view.** A setting is a state, which `ros2 param`, `rqt_reconfigure` and launch files already know how to set, save and restore. Starting the live view is an action, which a service expresses better, and it returns at once.
 
-**Pictures are published with their content, and without it.** A 5D Mark II RAW file is about 30 MB, which is heavy for DDS over a network. The content on `~/picture` makes the picture available to any node, even on another computer. `~/saved_picture` carries the same message without it, for a node on the same computer, which reads `path`, and for web pages: rosbridge would send the content as base64 in JSON, about 40 MB of text, through the WebSocket that also carries the services, and decoded by JavaScript. Two topics rather than a parameter, so that both kinds of subscriber can be served at once.
+**Pictures are published as a path, never as their content.** A 5D Mark II RAW file is about 30 MB. On DDS, it would compete with every other node on the network for a moment after each shot, which a node with deadlines of its own, e.g. a motor controller, cannot afford. Through rosbridge, it would reach a browser as about 40 MB of base64 text in JSON, ahead of every service call on the same WebSocket. So `~/picture` says where the file is: a node on the same computer reads it, and any other client loads it over HTTP from the web server, with ranges. The price is that a node on another computer needs HTTP, not only ROS, to get a picture.
 
 **HTTP for the pictures, in a server of the package.** A browser loads a file over HTTP in binary, in the background, with ranges, and gives it a URL it can link to. web_video_server only serves topics, and rosbridge only speaks JSON, so the package has its own server. It also serves the test page, so that the page and the pictures share an origin, and Node.js is needed only to build the page, not to run it.

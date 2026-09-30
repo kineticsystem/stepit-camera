@@ -65,7 +65,7 @@ flowchart TB
         Dist["web/dist"] --> Web
     end
     Web -- "HTML, JS<br/>the pictures" --> Browser["Browser<br/>React page"]
-    Bridge <-- "WebSocket, JSON<br/>services, parameters<br/>saved_picture" --> Browser
+    Bridge <-- "WebSocket, JSON<br/>services, parameters<br/>picture" --> Browser
     Video -- "MJPEG" --> Browser
 
     classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
@@ -153,19 +153,19 @@ sequenceDiagram
     participant Bridge as rosbridge
     participant Node as camera node
     participant Web as web server
-    UI->>Bridge: subscribe /camera/saved_picture
+    UI->>Bridge: subscribe /camera/picture
     UI->>Bridge: call /camera/take_picture
     Bridge->>Node: take_picture
     Node-->>UI: Shutter released
     Note over Node: the camera stores the picture,<br/>the driver downloads and saves it
-    Node->>Bridge: /camera/saved_picture
+    Node->>Bridge: /camera/picture
     Bridge-->>UI: its name and path, no content
     UI->>Web: GET /pictures/IMG_0042.CR2, the first 64 KB
     UI->>Web: GET the range of the JPEG preview
     UI->>Bridge: unsubscribe, 2 s later
 ```
 
-The page subscribes to `/camera/saved_picture` only while it waits for its shot, since it only shows its own shots. It subscribes before releasing the shutter, so that the picture cannot come first, and keeps listening 2 seconds after the first file, for the second file of a RAW+JPEG shot.
+The page subscribes to `/camera/picture` only while it waits for its shot, since it only shows its own shots. It subscribes before releasing the shutter, so that the picture cannot come first, and keeps listening 2 seconds after the first file, for the second file of a RAW+JPEG shot.
 
 The message carries the path of the file, not its content: [`picture.ts`](../web/src/client/camera/picture.ts) loads it from the web server, at `/pictures/<file name>`, the path's last part, since the driver may have added a suffix to the camera's name. The page is served by the same server, so the address is relative; the development server passes `/pictures` on to port 8090.
 

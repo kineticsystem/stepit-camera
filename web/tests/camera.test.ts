@@ -55,13 +55,13 @@ describe('the camera over rosbridge', () => {
     await expect(failed).rejects.toThrow('The camera is not connected');
   });
 
-  it('hears of the saved pictures, reliably, without their content', () => {
+  it('hears of the saved pictures, reliably', () => {
     const listener = vi.fn();
     camera.onPicture(listener);
     expect(socket.lastSent('subscribe')).toMatchObject({
-      topic: '/camera/saved_picture', type: 'stepit_camera_msgs/msg/Picture', qos: { reliability: 'reliable' },
+      topic: '/camera/picture', type: 'stepit_camera_msgs/msg/Picture', qos: { reliability: 'reliable' },
     });
-    socket.receive({ op: 'publish', topic: '/camera/saved_picture', msg: { name: 'IMG_0001.JPG', path: '/p/IMG_0001_1.JPG', data: [] } });
+    socket.receive({ op: 'publish', topic: '/camera/picture', msg: { name: 'IMG_0001.JPG', path: '/p/IMG_0001_1.JPG' } });
     expect(listener).toHaveBeenCalledWith({ name: 'IMG_0001.JPG', path: '/p/IMG_0001_1.JPG' });
   });
 

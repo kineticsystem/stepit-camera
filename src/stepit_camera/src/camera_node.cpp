@@ -89,8 +89,13 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
   const bool fake_camera =
       declare_parameter("fake_camera", false, read_only("Run a fake camera instead of the one connected over USB."));
   frame_id_ = declare_parameter("frame_id", "camera", read_only("The frame of the images."));
-  download_directory_ = declare_parameter("download_directory", "~/pictures",
-                                          read_only("Where to save the pictures. Empty not to save them."));
+  download_directory_ = declare_parameter("download_directory", "~/pictures", read_only("Where to save the pictures."));
+  // A picture reaches the other nodes as a file: without a folder to save it
+  // into, it would reach nobody.
+  if (download_directory_.empty())
+  {
+    throw std::invalid_argument("The parameter download_directory must name a folder to save the pictures into");
+  }
   keep_on_camera_ = declare_parameter(
       "keep_on_camera", true,
       read_only("Store the pictures on the memory card, or only in the camera's memory until they are downloaded."));
@@ -121,7 +126,6 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
 
   preview_publisher_ = create_publisher<sensor_msgs::msg::CompressedImage>("~/preview/compressed", rclcpp::QoS(1));
   picture_publisher_ = create_publisher<stepit_camera_msgs::msg::Picture>("~/picture", rclcpp::QoS(10));
-  saved_picture_publisher_ = create_publisher<stepit_camera_msgs::msg::Picture>("~/saved_picture", rclcpp::QoS(10));
 
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -298,27 +302,20 @@ void CameraNode::onPicture(const CameraFile& file, std::vector<uint8_t>&& data)
   message.name = file.name;
   message.folder = file.folder;
 
-  if (!download_directory_.empty())
+  // The message says where the file is, never what is in it: a RAW file is
+  // tens of megabytes, too heavy for DDS, which the other nodes share.
+  try
   {
-    try
-    {
-      message.path = savePicture(expandHome(download_directory_), file.name, data).string();
-    }
-    catch (const std::exception& error)
-    {
-      RCLCPP_ERROR(get_logger(), "Cannot save %s: %s", file.name.c_str(), error.what());
-    }
+    message.path = savePicture(expandHome(download_directory_), file.name, data).string();
   }
-  const std::string destination = message.path.empty() ? "" : " to " + message.path;
-  RCLCPP_INFO(get_logger(), "Downloaded %s (%.1f MB)%s", file.name.c_str(), static_cast<double>(data.size()) / 1e6,
-              destination.c_str());
-
-  // Without its content first: the content is moved into the other message.
-  if (!message.path.empty())
+  catch (const std::exception& error)
   {
-    saved_picture_publisher_->publish(message);
+    const char* copy = keep_on_camera_ ? "it is still on the memory card" : "it is lost";
+    RCLCPP_ERROR(get_logger(), "Cannot save %s, %s: %s", file.name.c_str(), copy, error.what());
+    return;
   }
-  message.data = std::move(data);
+  RCLCPP_INFO(get_logger(), "Downloaded %s (%.1f MB) to %s", file.name.c_str(), static_cast<double>(data.size()) / 1e6,
+              message.path.c_str());
   picture_publisher_->publish(message);
 }
 

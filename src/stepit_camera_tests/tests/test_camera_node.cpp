@@ -22,7 +22,6 @@
 
 #include <unistd.h>
 
-#include <algorithm>
 #include <atomic>
 #include <filesystem>
 #include <fstream>
@@ -89,13 +88,7 @@ protected:
   void start(std::vector<rclcpp::Parameter> parameters = {})
   {
     parameters.emplace_back("fake_camera", true);
-    const bool has_download_directory = std::any_of(parameters.begin(), parameters.end(), [](const auto& parameter) {
-      return parameter.get_name() == "download_directory";
-    });
-    if (!has_download_directory)
-    {
-      parameters.emplace_back("download_directory", folder_.string());
-    }
+    parameters.emplace_back("download_directory", folder_.string());
     parameters.emplace_back("preview_rate", 50.0);
     parameters.emplace_back("reconnect_period", 0.02);
 
@@ -116,11 +109,6 @@ protected:
                                                                     std::lock_guard<std::mutex> lock(mutex_);
                                                                     pictures_.push_back(picture);
                                                                   });
-    saved_picture_subscription_ = client_->create_subscription<Picture>("camera/saved_picture", rclcpp::QoS(10),
-                                                                        [this](Picture::ConstSharedPtr picture) {
-                                                                          std::lock_guard<std::mutex> lock(mutex_);
-                                                                          saved_pictures_.push_back(picture);
-                                                                        });
 
     executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(camera_);
@@ -167,7 +155,6 @@ protected:
   rclcpp::Node::SharedPtr client_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr preview_subscription_;
   rclcpp::Subscription<Picture>::SharedPtr picture_subscription_;
-  rclcpp::Subscription<Picture>::SharedPtr saved_picture_subscription_;
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
   std::thread spinner_;
 
@@ -175,7 +162,6 @@ protected:
   std::atomic<int> frames_{ 0 };
   sensor_msgs::msg::CompressedImage::ConstSharedPtr last_frame_;
   std::vector<Picture::ConstSharedPtr> pictures_;
-  std::vector<Picture::ConstSharedPtr> saved_pictures_;
 };
 
 TEST_F(CameraNodeTest, TheLiveViewStartsAndStopsOnRequest)
@@ -208,7 +194,7 @@ TEST_F(CameraNodeTest, TheLiveViewCanStartWithTheNode)
   EXPECT_TRUE(waitUntil([this] { return frames_ >= 3; }));
 }
 
-TEST_F(CameraNodeTest, APictureIsPublishedAndSaved)
+TEST_F(CameraNodeTest, APictureIsSavedAndPublishedWithItsPath)
 {
   start();
 
@@ -221,41 +207,21 @@ TEST_F(CameraNodeTest, APictureIsPublishedAndSaved)
   EXPECT_EQ(picture->header.frame_id, "camera");
   EXPECT_EQ(fs::path(picture->path), folder_ / "IMG_0001.JPG");
 
+  // The file is saved before the message says where it is.
   std::ifstream file(picture->path, std::ios::binary);
   const std::vector<uint8_t> saved{ std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
-  EXPECT_EQ(saved, picture->data);
-  EXPECT_GT(saved.size(), 1000u);
+  ASSERT_GT(saved.size(), 1000u);
+  EXPECT_EQ(saved[0], 0xff);
+  EXPECT_EQ(saved[1], 0xd8);
 }
 
-TEST_F(CameraNodeTest, ASavedPictureIsAlsoPublishedWithoutItsContent)
+TEST_F(CameraNodeTest, TheNodeNeedsAFolderForThePictures)
 {
-  start();
+  rclcpp::NodeOptions options;
+  options.arguments({ "--ros-args", "-r", "__ns:=" + namespace_ });
+  options.parameter_overrides({ rclcpp::Parameter("fake_camera", true), rclcpp::Parameter("download_directory", "") });
 
-  EXPECT_TRUE(call<Trigger>("take_picture")->success);
-
-  ASSERT_TRUE(waitUntil([this] {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return saved_pictures_.size() == 1;
-  }));
-  std::lock_guard<std::mutex> lock(mutex_);
-  const auto picture = saved_pictures_[0];
-  EXPECT_EQ(picture->name, "IMG_0001.JPG");
-  EXPECT_EQ(fs::path(picture->path), folder_ / "IMG_0001.JPG");
-  EXPECT_TRUE(picture->data.empty());
-  EXPECT_TRUE(fs::exists(picture->path));
-}
-
-TEST_F(CameraNodeTest, APictureNotSavedIsOnlyPublishedWithItsContent)
-{
-  start({ rclcpp::Parameter("download_directory", "") });
-
-  EXPECT_TRUE(call<Trigger>("take_picture")->success);
-
-  ASSERT_TRUE(waitUntil([this] { return pictures().size() == 1; }));
-  EXPECT_TRUE(pictures()[0]->path.empty());
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  std::lock_guard<std::mutex> lock(mutex_);
-  EXPECT_TRUE(saved_pictures_.empty());
+  EXPECT_THROW(CameraNode{ options }, std::invalid_argument);
 }
 
 TEST_F(CameraNodeTest, TheExposureIsSetThroughParameters)

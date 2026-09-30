@@ -5,8 +5,8 @@
 //   <node>/set_parameters    change a setting, e.g. iso, as `ros2 param set`
 //   <node>/start_streaming   the live view on, and off with stop_streaming
 //   <node>/take_picture      release the shutter for a test shot
-//   <node>/saved_picture     each picture the camera takes, once saved, without
-//                            its content, which the web server serves
+//   <node>/picture           each picture the camera takes, once saved: where
+//                            the file is, which the web server serves
 
 import type { Rosbridge } from '../ros/rosbridge';
 
@@ -93,7 +93,7 @@ export class Camera {
   onPicture(listener: (picture: Picture) => void): () => void {
     // Reliable, not rosbridge's default, best effort: a lost message is a
     // lost test shot.
-    return this.ros.subscribe<PictureMessage>(`${this.node}/saved_picture`, 'stepit_camera_msgs/msg/Picture', (message) =>
+    return this.ros.subscribe<PictureMessage>(`${this.node}/picture`, 'stepit_camera_msgs/msg/Picture', (message) =>
       listener({ name: message.name, path: message.path }),
     { reliability: 'reliable', durability: 'volatile', history: 'keep_last', depth: 2 });
   }

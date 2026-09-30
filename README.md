@@ -172,18 +172,15 @@ Stopping the live view lowers the mirror again, so that the camera is ready to s
 
 ### Pictures
 
-Every picture the camera takes is downloaded straight away, saved into the folder [`pictures`](pictures) of this repo, and published on two topics, both `stepit_camera_msgs/msg/Picture`:
+Every picture the camera takes is downloaded straight away, saved into the folder [`pictures`](pictures) of this repo, and published on `/camera/picture` (`stepit_camera_msgs/msg/Picture`). The message says where the file is, not what is in it: a node reads the file at `path`, and a web page loads it from the web server, at `/pictures/<file name>`. A RAW file of a 5D Mark II is about 30 MB, which would weigh on DDS and on every node sharing it, and which rosbridge would send to a browser as 40 MB of base64 text.
 
-- `/camera/picture`, with its content, for a node that cannot read the file, e.g. on another computer;
-- `/camera/saved_picture`, once saved, without its content: a node on the same computer reads the file at `path`, and a web page loads it from the web server, at `/pictures/<file name>`. A RAW file of a 5D Mark II is about 30 MB, too much for rosbridge, which would send it as 40 MB of base64 text.
-
-A shot in RAW+JPEG produces two files, and two messages on each topic.
+A shot in RAW+JPEG produces two files, and two messages.
 
 ```
-ros2 topic echo /camera/saved_picture --field path
+ros2 topic echo /camera/picture --field path
 ```
 
-Take a test shot, over USB. The picture comes like any other, on `/camera/picture` and `/camera/saved_picture`. This works with the fake camera too, which then takes a picture as a real camera would:
+Take a test shot, over USB. The picture comes like any other, on `/camera/picture`. This works with the fake camera too, which then takes a picture as a real camera would:
 
 ```
 ros2 service call /camera/take_picture std_srvs/srv/Trigger
@@ -246,7 +243,7 @@ Other web pages can use the same servers. The web server lets pages of any origi
 | `aperture` | `""` | The aperture, e.g. `8` or `5.6`. |
 | `exposure_compensation` | `""` | The exposure compensation in stops, e.g. `-1` or `0.3`. It has no effect on M, unless the ISO is Auto. |
 | `white_balance` | `""` | The white balance, e.g. `Auto`, `Daylight` or `Cloudy`. |
-| `download_directory` | `~/ws/pictures` | Where to save the pictures, and where the web server finds them. Empty not to save them. |
+| `download_directory` | `~/ws/pictures` | Where to save the pictures, and where the web server finds them. It cannot be empty. |
 | `keep_on_camera` | `true` | Store the pictures on the memory card too. When `false`, they only go to the camera's memory and are deleted once downloaded: the card never fills up, but a picture that cannot be downloaded is lost. |
 | `stream_on_start` | `false` | Start the live view as soon as the camera connects. Set by the launch argument `stream`. |
 | `preview_rate` | `10.0` | The frames of the live view per second, at most. |

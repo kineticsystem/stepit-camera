@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 #include <memory>
+#include <stdexcept>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -47,6 +48,10 @@ int main(int argc, char* argv[])
   int exit_code = 0;
   try
   {
+    if (download_directory.empty())
+    {
+      throw std::invalid_argument("The parameter download_directory must name the folder of the pictures");
+    }
     stepit_camera::WebServer server(stepit_camera::expandHome(web_directory),
                                     stepit_camera::expandHome(download_directory));
     const int bound = server.start(host, static_cast<int>(port));

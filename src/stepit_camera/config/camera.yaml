@@ -9,8 +9,8 @@
 
     # Where to save the pictures the camera takes. The repo is mounted at ~/ws
     # in the container, so they land in its `pictures` folder on the host.
-    # Empty not to save them: they are still published on ~/picture, but the
-    # web server cannot serve them. The web server reads this one too.
+    # It cannot be empty: ~/picture tells where each file is, and the web
+    # server, which reads this parameter too, serves them from here.
     download_directory: "~/ws/pictures"
 
     # Store each picture on the memory card, as well as downloading it. When

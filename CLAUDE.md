@@ -60,10 +60,11 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
   test: check it by hand with a real camera.
 - A new camera setting is one line in `SETTINGS` (`settings.hpp`) plus its choices in
   `FakeCamera`.
-- **Pictures reach web pages over HTTP, never through rosbridge.** `~/saved_picture` is
-  `~/picture` without the content; the page loads the file from `web_server`
-  (`/pictures/<name>`), a RAW through two `Range` requests for its JPEG preview. Do not make a
-  page subscribe to `~/picture`: rosbridge would send ~40 MB of base64 per RAW.
+- **A picture is published as a path, never as its content.** `~/picture` says where the
+  saved file is; nodes read it, pages load it from `web_server` (`/pictures/<name>`), a RAW
+  through two `Range` requests for its JPEG preview. Do not add the content to the message: a
+  ~30 MB RAW would load DDS, which motor controllers may share, and rosbridge would send ~40 MB
+  of base64. Hence `download_directory` cannot be empty.
 - `web_server` (cpp-httplib) must keep `SO_REUSEADDR` only: httplib's default `SO_REUSEPORT` lets
   a leftover server share the port silently.
 
@@ -74,7 +75,7 @@ not a ROS package (`web/COLCON_IGNORE`). It only tests the camera and the driver
 free of anything beyond them.
 
 - **The browser talks to the driver's servers directly**: `web_server` (8090) for the page
-  and the pictures, rosbridge (9091) for services, parameters and `saved_picture`,
+  and the pictures, rosbridge (9091) for services, parameters and `picture`,
   web_video_server (8081) for the live view.
 - **Layers**: `ros/` knows rosbridge only; `camera/` knows the camera's ROS interface and the
   web server but not React; stores and components on top. Test with `tests/fakeSocket.ts` and
