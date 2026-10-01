@@ -88,6 +88,12 @@ free of anything beyond them.
 | `stepit_camera` | All the code, as a shared library, plus the node, the web server, config and launch file. |
 | `stepit_camera_tests` | All tests, against `FakeCamera`; the other packages carry none. |
 
+## CI
+
+`.github/workflows`, as in StepIt Driver: `industrial_ci.yml` builds and tests (jazzy, main and
+testing), `ci-format.yml` runs pre-commit without the ament hooks, `ci-ros-lint.yml` runs those per
+package; a new package must be added to its `package-name` lists.
+
 ## Conventions
 
 - Every source file carries the MIT copyright header (`ament_copyright` enforces it).

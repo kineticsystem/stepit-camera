@@ -1,5 +1,10 @@
 # StepIt Camera
 
+[![CI](https://github.com/kineticsystem/stepit-camera/actions/workflows/industrial_ci.yml/badge.svg)](https://github.com/kineticsystem/stepit-camera/actions/workflows/industrial_ci.yml)
+[![Format](https://github.com/kineticsystem/stepit-camera/actions/workflows/ci-format.yml/badge.svg)](https://github.com/kineticsystem/stepit-camera/actions/workflows/ci-format.yml)
+[![Linters](https://github.com/kineticsystem/stepit-camera/actions/workflows/ci-ros-lint.yml/badge.svg)](https://github.com/kineticsystem/stepit-camera/actions/workflows/ci-ros-lint.yml)
+[![Test page](https://github.com/kineticsystem/stepit-camera/actions/workflows/web.yml/badge.svg)](https://github.com/kineticsystem/stepit-camera/actions/workflows/web.yml)
+
 ## Table of Contents <!-- omit in toc -->
 
 - [Introduction](#introduction)
@@ -17,6 +22,7 @@
 - [Parameters](#parameters)
 - [Troubleshooting](#troubleshooting)
 - [Running the Driver from Another Project](#running-the-driver-from-another-project)
+- [Continuous Integration](#continuous-integration)
 
 ## Introduction
 
@@ -341,3 +347,16 @@ Another project can run the driver in its own Docker Compose file, without copyi
 ```
 
 The code has to be built in that container first, with `update.sh` and `build.sh`. Run one container or the other, not both, since both open the camera: remove the container made by this repo's `dock.sh` first, e.g. with `./docker/dock.sh stepit-camera clean`, and the other way round.
+
+## Continuous Integration
+
+Four GitHub Actions workflows run on every push and pull request, three of them as in StepIt Driver:
+
+| Workflow | What it checks |
+|---|---|
+| [`industrial_ci.yml`](.github/workflows/industrial_ci.yml) | Builds and tests the packages with [Industrial CI](https://github.com/ros-industrial/industrial_ci), against the main and the testing ROS repositories. The tests use the fake camera: no camera is needed. |
+| [`ci-format.yml`](.github/workflows/ci-format.yml) | The pre-commit hooks that need no ROS: clang-format, black, codespell, and the checks of whitespace and files. |
+| [`ci-ros-lint.yml`](.github/workflows/ci-ros-lint.yml) | The ament linters of every package: copyright, lint_cmake and cpplint. |
+| [`web.yml`](.github/workflows/web.yml) | The test page: type checks, tests and build, when `web` changes. |
+
+The workflows run locally with [Nektos `act`](https://github.com/nektos/act), which reads the variables of [`.env`](.env), from a clean checkout: Industrial CI mounts the working tree, `build` and `install` included. See [How to run GitHub Actions locally](https://github.com/kineticsystem/stepit-driver#how-to-run-github-actions-locally) in the README of StepIt Driver.
