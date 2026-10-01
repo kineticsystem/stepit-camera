@@ -92,7 +92,7 @@ free of anything beyond them.
 
 `.github/workflows`, as in StepIt Driver: `industrial_ci.yml` builds and tests (jazzy, main and
 testing), `ci-format.yml` runs pre-commit without the ament hooks, `ci-ros-lint.yml` runs those per
-package; a new package must be added to its `package-name` lists.
+package; a new package must be added to its package list.
 
 ## Conventions
 
