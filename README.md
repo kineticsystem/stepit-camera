@@ -351,7 +351,7 @@ The code has to be built in that container first, with `update.sh` and `build.sh
 
 ## Continuous Integration
 
-Four GitHub Actions workflows run on every push and pull request, three of them as in StepIt Driver:
+Four GitHub Actions workflows run on every push and pull request, three of them as in StepIt Motors:
 
 | Workflow | What it checks |
 |---|---|
@@ -360,4 +360,4 @@ Four GitHub Actions workflows run on every push and pull request, three of them 
 | [`ci-ros-lint.yml`](.github/workflows/ci-ros-lint.yml) | The ament linters of every package: copyright, lint_cmake and cpplint. |
 | [`web.yml`](.github/workflows/web.yml) | The test page: type checks, tests and build, when `web` changes. |
 
-The workflows run locally with [Nektos `act`](https://github.com/nektos/act), which reads the variables of [`.env`](.env), from a clean checkout: Industrial CI mounts the working tree, `build` and `install` included. See [How to run GitHub Actions locally](https://github.com/kineticsystem/stepit-driver#how-to-run-github-actions-locally) in the README of StepIt Driver.
+The workflows run locally with [Nektos `act`](https://github.com/nektos/act), which reads the variables of [`.env`](.env), from a clean checkout: Industrial CI mounts the working tree, `build` and `install` included. See [How to run GitHub Actions locally](https://github.com/kineticsystem/stepit-motors#how-to-run-github-actions-locally) in the README of StepIt Motors.
