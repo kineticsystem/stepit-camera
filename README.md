@@ -269,6 +269,7 @@ The web server, `/web_server`, reads `download_directory` from the same file, an
 
 | Launch argument | Default | Description |
 |---|---|---|
+| `params_file` | `camera.yaml` | A parameter file loaded after `camera.yaml`, by the camera and by the web server, e.g. by a robot that runs the camera with values of its own. The launch arguments `fake`, `stream` and `web_port` still win over it. |
 | `fake` | `false` | Run a fake camera. |
 | `stream` | `false` | Start the live view as soon as the camera connects. |
 | `web` | `true` | Start the web server, for the test page and the pictures. |
