@@ -60,6 +60,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             parameters,
+            LaunchConfiguration("params_file"),
             {
                 "fake_camera": ParameterValue(
                     LaunchConfiguration("fake"), value_type=bool
@@ -81,6 +82,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             parameters,
+            LaunchConfiguration("params_file"),
             {"port": ParameterValue(LaunchConfiguration("web_port"), value_type=int)},
         ],
         condition=IfCondition(LaunchConfiguration("web")),
@@ -121,6 +123,14 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            # Loaded after camera.yaml, and before the launch arguments: a
+            # robot that runs the camera sets its own values, e.g.
+            # download_directory, without changing this package.
+            DeclareLaunchArgument(
+                "params_file",
+                default_value=parameters,
+                description="A parameter file loaded after camera.yaml, for both the camera and the web server",
+            ),
             DeclareLaunchArgument(
                 "fake",
                 default_value="false",
