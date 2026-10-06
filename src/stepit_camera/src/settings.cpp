@@ -108,6 +108,28 @@ std::filesystem::path expandHome(const std::string& path)
   return path;
 }
 
+std::optional<std::filesystem::path> pictureFolder(const std::string& folder)
+{
+  auto path = std::filesystem::path(folder).lexically_normal();
+  if (path.is_absolute() || path.has_root_name())
+  {
+    return std::nullopt;
+  }
+  for (const auto& part : path)
+  {
+    if (part == "..")
+    {
+      return std::nullopt;
+    }
+  }
+  // A trailing slash leaves an empty last part; "." is download_directory itself.
+  if (!path.empty() && path.filename().empty())
+  {
+    path = path.parent_path();
+  }
+  return path == "." ? std::filesystem::path() : path;
+}
+
 std::filesystem::path savePicture(const std::filesystem::path& folder, const std::string& name,
                                   const std::vector<uint8_t>& data)
 {

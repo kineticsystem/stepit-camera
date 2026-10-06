@@ -146,4 +146,20 @@ TEST_F(SavePicture, TheFolderOfTheCameraIsNotPartOfTheName)
   EXPECT_EQ(path, folder_ / "IMG_0002.CR2");
 }
 
+TEST(PictureFolder, AcceptsAFolderUnderTheDownloadDirectory)
+{
+  EXPECT_EQ(pictureFolder("2026-10-06/angle_01"), fs::path("2026-10-06/angle_01"));
+  EXPECT_EQ(pictureFolder("tests/"), fs::path("tests"));
+  EXPECT_EQ(pictureFolder("a/./b/../c"), fs::path("a/c"));
+  EXPECT_EQ(pictureFolder(""), fs::path());
+  EXPECT_EQ(pictureFolder("."), fs::path());
+}
+
+TEST(PictureFolder, RefusesAFolderOutsideIt)
+{
+  EXPECT_EQ(pictureFolder("/tmp"), std::nullopt);
+  EXPECT_EQ(pictureFolder(".."), std::nullopt);
+  EXPECT_EQ(pictureFolder("a/../../b"), std::nullopt);
+}
+
 }  // namespace stepit_camera::test

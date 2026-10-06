@@ -206,6 +206,7 @@ TEST_F(CameraNodeTest, APictureIsSavedAndPublishedWithItsPath)
   EXPECT_EQ(picture->name, "IMG_0001.JPG");
   EXPECT_EQ(picture->header.frame_id, "camera");
   EXPECT_EQ(fs::path(picture->path), folder_ / "IMG_0001.JPG");
+  EXPECT_EQ(picture->relative_path, "IMG_0001.JPG");
 
   // The file is saved before the message says where it is.
   std::ifstream file(picture->path, std::ios::binary);
@@ -213,6 +214,35 @@ TEST_F(CameraNodeTest, APictureIsSavedAndPublishedWithItsPath)
   ASSERT_GT(saved.size(), 1000u);
   EXPECT_EQ(saved[0], 0xff);
   EXPECT_EQ(saved[1], 0xd8);
+}
+
+// One folder per stack: a node sets the folder of the next pictures while the
+// camera runs, and the message says where the file is under download_directory.
+TEST_F(CameraNodeTest, ThePicturesGoIntoTheFolderSetWhileRunning)
+{
+  start();
+
+  ASSERT_TRUE(camera_->set_parameter(rclcpp::Parameter("folder", "2026-10-06_15-20-04/angle_01")).successful);
+  EXPECT_TRUE(call<Trigger>("take_picture")->success);
+  ASSERT_TRUE(waitUntil([this] { return pictures().size() == 1; }));
+  EXPECT_EQ(fs::path(pictures()[0]->path), folder_ / "2026-10-06_15-20-04" / "angle_01" / "IMG_0001.JPG");
+  EXPECT_EQ(pictures()[0]->relative_path, "2026-10-06_15-20-04/angle_01/IMG_0001.JPG");
+  EXPECT_TRUE(fs::exists(pictures()[0]->path));
+
+  // Back to download_directory itself.
+  ASSERT_TRUE(camera_->set_parameter(rclcpp::Parameter("folder", "")).successful);
+  EXPECT_TRUE(call<Trigger>("take_picture")->success);
+  ASSERT_TRUE(waitUntil([this] { return pictures().size() == 2; }));
+  EXPECT_EQ(pictures()[1]->relative_path, "IMG_0002.JPG");
+}
+
+TEST_F(CameraNodeTest, AFolderOutsideTheDownloadDirectoryIsRefused)
+{
+  start();
+
+  EXPECT_FALSE(camera_->set_parameter(rclcpp::Parameter("folder", "/tmp")).successful);
+  EXPECT_FALSE(camera_->set_parameter(rclcpp::Parameter("folder", "../elsewhere")).successful);
+  EXPECT_EQ(camera_->get_parameter("folder").as_string(), "");
 }
 
 TEST_F(CameraNodeTest, TheNodeNeedsAFolderForThePictures)

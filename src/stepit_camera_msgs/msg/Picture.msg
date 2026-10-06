@@ -21,3 +21,8 @@ string folder
 # a file is never overwritten, so a name that comes back gets a suffix, e.g.
 # IMG_0001_1.JPG.
 string path
+
+# The same file, relative to the camera's download_directory, with / between
+# folders, e.g. 2026-10-06/angle_01/IMG_0042.CR2, in the subfolder the camera's
+# parameter folder named: the web server serves it at /pictures/<relative_path>.
+string relative_path
