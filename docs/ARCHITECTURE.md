@@ -112,11 +112,12 @@ The node's interface:
 | Name | Type | What it does |
 |---|---|---|
 | `~/preview/compressed` | `sensor_msgs/CompressedImage` topic | The live view, as JPEG frames, while streaming. |
-| `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, once saved: its name, and where the file is. |
+| `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, once saved: its name, where the file is, and its path under `download_directory`, `relative_path`. |
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
 | `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
+| `folder` | parameter | The subfolder of `download_directory` the next pictures go into; it can change while the camera runs. |
 
 The launch file also starts, for web pages, the web server of the package, which serves the test page and the saved pictures over HTTP on port 8090 (see [The Web Server](#the-web-server)), [web_video_server](https://github.com/RobotWebTools/web_video_server), which serves the live view as MJPEG on port 8081 (`type=ros_compressed` passes the camera's JPEG frames through), and [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091. The camera needs a rosbridge of its own, because a rosbridge can only handle the messages installed next to it, and `stepit_camera_msgs` is installed here only. It is not on rosbridge's default port, 9090, so that it can run next to another rosbridge on the same machine.
 
@@ -400,7 +401,7 @@ sequenceDiagram
         Driver->>Camera: remove(IMG_0042.JPG)
     end
     Driver->>Node: on_picture
-    Node->>Node: save into download_directory
+    Node->>Node: save into download_directory/folder
     Node-->>Node: publish ~/picture
 ```
 
@@ -409,14 +410,16 @@ When the camera connects, the node sets its `capturetarget`:
 - **Memory card**, with `keep_on_camera` true, the default. Every picture stays on the card as well: nothing is lost if the computer fails to download it.
 - **Internal RAM**, with `keep_on_camera` false. The pictures only live in the camera's memory until they are downloaded, and the driver deletes them after downloading them, so the card never fills up.
 
-The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture on `~/picture`, with its path. A picture that cannot be saved, e.g. on a full disk, is not published: the error is logged, and the picture is still on the memory card, unless `keep_on_camera` is false. For the same reason, the node refuses to start with an empty `download_directory`.
+The node saves a picture under its name on the camera, and never overwrites a file: the camera numbers its files from `IMG_0001` again after `IMG_9999` or with a new card, so a name can come back, and the second file gets a suffix, e.g. `IMG_0001_1.JPG`. Then it publishes the picture on `~/picture`, with its path, and its `relative_path` under `download_directory`, which is where the web server serves it.
+
+**The folder of the next pictures can change while the camera runs.** The parameter `folder` names a subfolder of `download_directory`, empty by default, e.g. one folder per series of shots, which a client sets with the node's standard `set_parameters` service. The node creates it with the first picture in it. It refuses a folder outside `download_directory`, absolute or with `..` (`pictureFolder`): the web server serves `download_directory` only. The callback of the parameters and the download thread share the folder under a mutex; a picture takes the folder of the moment it is saved. A picture that cannot be saved, e.g. on a full disk, is not published: the error is logged, and the picture is still on the memory card, unless `keep_on_camera` is false. For the same reason, the node refuses to start with an empty `download_directory`.
 
 ## The Web Server
 
 `web_server` is a second executable of the package, launched next to the node, with [cpp-httplib](https://github.com/yhirose/cpp-httplib). `WebServer` serves two folders:
 
 - `/`: the test page, `web/dist`, as `build` bundles it;
-- `/pictures/<name>`: the pictures, `download_directory`, read from the same `camera.yaml` as the node.
+- `/pictures/<relative_path>`: the pictures, `download_directory` and its subfolders, read from the same `camera.yaml` as the node.
 
 It serves the files as they are on disk, with `Range` requests, so that the test page reads only the JPEG preview of a RAW file: its location is in the first 64 KB of the file, and the preview of a 5D Mark II is about 1.4 MB of a 30 MB file. Every response allows any origin, and exposes `Content-Range`, so that a page served elsewhere, e.g. by another application, can load the pictures too.
 
@@ -476,11 +479,11 @@ The tests run against the fake camera, so they need no hardware:
 
 | Test | What it covers |
 |---|---|
-| `test_settings` | Matching values to choices, the capture target, expanding `~`, saving pictures without overwriting. |
+| `test_settings` | Matching values to choices, the capture target, expanding `~`, saving pictures without overwriting, the folders accepted and refused. |
 | `test_fake_camera` | The fake camera behaves as the driver expects a camera to: live view, settings, events, unplugging. |
 | `test_camera_driver` | The loop: streaming on request and at the requested rate, downloading while streaming, deleting after download, tasks and their errors, reconnecting, stopping cleanly. |
-| `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters. |
-| `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, nothing served outside the two folders, a port already in use. |
+| `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters, the folder of the pictures set while running. |
+| `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, a picture in a subfolder, nothing served outside the two folders, a port already in use. |
 
 The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#tests).
 
