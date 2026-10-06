@@ -74,6 +74,15 @@ std::optional<std::string> captureTargetChoice(bool memory_card, const std::vect
 std::filesystem::path expandHome(const std::string& path);
 
 /**
+ * @brief The folder the parameter `folder` names, under download_directory:
+ * a relative path, normalised, e.g. "2026-10-06/angle_01", or empty for
+ * download_directory itself. Nothing, if it is absolute or climbs out with
+ * "..": the pictures stay under download_directory, which the web server
+ * serves.
+ */
+std::optional<std::filesystem::path> pictureFolder(const std::string& folder);
+
+/**
  * @brief Save a picture into a folder, creating the folder if needed, and
  * return the path of the file.
  *

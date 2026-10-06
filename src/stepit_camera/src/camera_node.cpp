@@ -96,6 +96,18 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
   {
     throw std::invalid_argument("The parameter download_directory must name a folder to save the pictures into");
   }
+  {
+    rcl_interfaces::msg::ParameterDescriptor descriptor;
+    descriptor.description =
+        "The subfolder of download_directory the next pictures go into, e.g. 2026-10-06/angle_01; empty for "
+        "download_directory itself. It can change while the camera runs.";
+    const auto folder = pictureFolder(declare_parameter("folder", "", descriptor));
+    if (!folder)
+    {
+      throw std::invalid_argument("The parameter folder must be a relative path inside download_directory");
+    }
+    folder_ = *folder;
+  }
   keep_on_camera_ = declare_parameter(
       "keep_on_camera", true,
       read_only("Store the pictures on the memory card, or only in the camera's memory until they are downloaded."));
@@ -251,6 +263,21 @@ rcl_interfaces::msg::SetParametersResult CameraNode::onSetParameters(const std::
 
   for (const auto& parameter : parameters)
   {
+    if (parameter.get_name() == "folder")
+    {
+      const auto folder = parameter.get_type() == rclcpp::ParameterType::PARAMETER_STRING ?
+                              pictureFolder(parameter.as_string()) :
+                              std::nullopt;
+      if (!folder)
+      {
+        result.successful = false;
+        result.reason = "folder must be a relative path inside download_directory, without ..";
+        return result;
+      }
+      std::lock_guard<std::mutex> lock(folder_mutex_);
+      folder_ = *folder;
+      continue;
+    }
     const auto* setting = findSetting(parameter.get_name());
     if (setting == nullptr)
     {
@@ -304,9 +331,17 @@ void CameraNode::onPicture(const CameraFile& file, std::vector<uint8_t>&& data)
 
   // The message says where the file is, never what is in it: a RAW file is
   // tens of megabytes, too heavy for DDS, which the other nodes share.
+  std::filesystem::path folder;
+  {
+    std::lock_guard<std::mutex> lock(folder_mutex_);
+    folder = folder_;
+  }
   try
   {
-    message.path = savePicture(expandHome(download_directory_), file.name, data).string();
+    const auto root = expandHome(download_directory_);
+    const auto path = savePicture(root / folder, file.name, data);
+    message.path = path.string();
+    message.relative_path = path.lexically_relative(root).generic_string();
   }
   catch (const std::exception& error)
   {

@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -46,7 +47,9 @@ namespace stepit_camera
  * - `~/preview/compressed` (sensor_msgs/CompressedImage): the live view, as
  *   JPEG frames, while streaming.
  * - `~/picture` (stepit_camera_msgs/Picture): each picture the camera takes,
- *   downloaded as soon as it is reported, and saved into `download_directory`.
+ *   downloaded as soon as it is reported, and saved into `download_directory`,
+ *   in the subfolder that the parameter `folder` names at the time, which a
+ *   node can change while the camera runs, e.g. one folder per stack.
  *   The message says where the file is, not what is in it: a node reads the
  *   file, and a web page loads it from the web server.
  * - `~/start_streaming`, `~/stop_streaming` (std_srvs/Trigger): the live view.
@@ -87,6 +90,9 @@ private:
 
   std::string frame_id_;
   std::string download_directory_;
+  /// The subfolder of download_directory the next pictures go into: the parameter `folder`.
+  std::filesystem::path folder_;
+  std::mutex folder_mutex_;
   bool keep_on_camera_ = true;
 
   /// @brief The value of each setting to apply on connection, by parameter name. Empty leaves the camera as it is.

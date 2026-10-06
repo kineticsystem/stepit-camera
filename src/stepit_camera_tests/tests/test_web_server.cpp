@@ -95,6 +95,21 @@ TEST_F(WebServerTest, ServesAPictureSavedAfterItStarted)
   EXPECT_EQ(response->get_header_value("Access-Control-Allow-Origin"), "*");
 }
 
+// A picture the camera saved into a subfolder, the parameter folder of the
+// camera node, is at its relative_path under /pictures.
+TEST_F(WebServerTest, ServesAPictureInASubfolder)
+{
+  start();
+  const auto folder = root_ / "pictures" / "2026-10-06_15-20-04" / "angle_01";
+  fs::create_directories(folder);
+  write(folder / "IMG_0001.CR2", "raw content");
+
+  const auto response = client_->Get("/pictures/2026-10-06_15-20-04/angle_01/IMG_0001.CR2");
+  ASSERT_TRUE(response);
+  EXPECT_EQ(response->status, 200);
+  EXPECT_EQ(response->body, "raw content");
+}
+
 TEST_F(WebServerTest, ServesAPartOfAPicture)
 {
   start();

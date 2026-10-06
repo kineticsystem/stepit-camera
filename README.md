@@ -178,7 +178,7 @@ Stopping the live view lowers the mirror again, so that the camera is ready to s
 
 ### Pictures
 
-Every picture the camera takes is downloaded straight away, saved into the folder [`pictures`](pictures) of this repo, and published on `/camera/picture` (`stepit_camera_msgs/msg/Picture`). The message says where the file is, not what is in it: a node reads the file at `path`, and a web page loads it from the web server, at `/pictures/<file name>`. A RAW file of a 5D Mark II is about 30 MB, which would weigh on DDS and on every node sharing it, and which rosbridge would send to a browser as 40 MB of base64 text.
+Every picture the camera takes is downloaded straight away, saved into the folder [`pictures`](pictures) of this repo, and published on `/camera/picture` (`stepit_camera_msgs/msg/Picture`). The message says where the file is, not what is in it: a node reads the file at `path`, and a web page loads it from the web server, at `/pictures/<relative_path>`, the file's path under `download_directory`. A RAW file of a 5D Mark II is about 30 MB, which would weigh on DDS and on every node sharing it, and which rosbridge would send to a browser as 40 MB of base64 text.
 
 A shot in RAW+JPEG produces two files, and two messages.
 
@@ -195,6 +195,15 @@ ros2 service call /camera/take_picture std_srvs/srv/Trigger
 The live view pauses for the shot, for a second or so, and goes on by itself.
 
 A picture never overwrites another one: if a file of the same name already exists, e.g. because the camera started numbering from `IMG_0001` again, it gets a suffix, e.g. `IMG_0001_1.JPG`.
+
+The pictures can go into a subfolder of `download_directory`, which the parameter `folder` names and which can change while the driver runs, e.g. one folder per series of shots. The folder is created with the first picture in it. `relative_path` in the message then holds the folder too, e.g. `2026-10-06/angle_01/IMG_0042.CR2`:
+
+```
+ros2 param set /camera folder 2026-10-06/angle_01
+ros2 param set /camera folder ""
+```
+
+A folder outside `download_directory`, absolute or with `..`, is refused: the web server only serves `download_directory`.
 
 > [!IMPORTANT]
 > The stamp of a picture is the time it was downloaded, a fraction of a second after the shot, not the time of the shot. For a precise time, use the time the camera was fired, e.g. as recorded by the device that fired it.
@@ -250,6 +259,7 @@ Other web pages can use the same servers. The web server lets pages of any origi
 | `exposure_compensation` | `""` | The exposure compensation in stops, e.g. `-1` or `0.3`. It has no effect on M, unless the ISO is Auto. |
 | `white_balance` | `""` | The white balance, e.g. `Auto`, `Daylight` or `Cloudy`. |
 | `download_directory` | `~/ws/pictures` | Where to save the pictures, and where the web server finds them. It cannot be empty. |
+| `folder` | `""` | The subfolder of `download_directory` the next pictures go into, e.g. `2026-10-06/angle_01`; empty for `download_directory` itself. It can change while the driver runs. |
 | `keep_on_camera` | `true` | Store the pictures on the memory card too. When `false`, they only go to the camera's memory and are deleted once downloaded: the card never fills up, but a picture that cannot be downloaded is lost. |
 | `stream_on_start` | `false` | Start the live view as soon as the camera connects. Set by the launch argument `stream`. |
 | `preview_rate` | `10.0` | The frames of the live view per second, at most. |
@@ -257,7 +267,7 @@ Other web pages can use the same servers. The web server lets pages of any origi
 | `frame_id` | `camera` | The frame of the images. |
 | `fake_camera` | `false` | Run a fake camera. Set by the launch argument `fake`. |
 
-Only the five settings of the camera, from `iso` to `white_balance`, can change while the driver runs; the others are read once, at start.
+Only the five settings of the camera, from `iso` to `white_balance`, and `folder` can change while the driver runs; the others are read once, at start.
 
 The web server, `/web_server`, reads `download_directory` from the same file, and has parameters of its own:
 
