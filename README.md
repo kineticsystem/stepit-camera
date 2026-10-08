@@ -17,6 +17,7 @@
 - [Running the Application](#running-the-application)
   - [Streaming](#streaming)
   - [Pictures](#pictures)
+  - [The Web Server's API](#the-web-servers-api)
   - [Exposure](#exposure)
 - [The Test Page](#the-test-page)
 - [Parameters](#parameters)
@@ -148,7 +149,7 @@ Add `stream:=true` to start the live view as soon as the camera connects.
 
 The launch file also starts three servers for web pages, such as the [test page](#the-test-page):
 
-- the web server of this package on port 8090, which serves the test page, <http://localhost:8090>, and the saved pictures, e.g. <http://localhost:8090/pictures/IMG_0001.JPG>;
+- the web server of this package on port 8090, which serves the test page, <http://localhost:8090>, the saved pictures, e.g. <http://localhost:8090/pictures/IMG_0001.JPG>, and what the folder of pictures holds, see [The Web Server's API](#the-web-servers-api);
 - [web_video_server](https://github.com/RobotWebTools/web_video_server) on port 8081, which streams the live view to a browser, e.g. <http://localhost:8081/stream?topic=/camera/preview&type=ros_compressed>;
 - [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and hear of the pictures. It is not on rosbridge's default port, 9090, so that it can run next to another rosbridge: a rosbridge only knows the messages installed next to it, and only this one knows the driver's messages, `stepit_camera_msgs`.
 
@@ -207,6 +208,39 @@ A folder outside `download_directory`, absolute or with `..`, is refused: the we
 
 > [!IMPORTANT]
 > The stamp of a picture is the time it was downloaded, a fraction of a second after the shot, not the time of the shot. For a precise time, use the time the camera was fired, e.g. as recorded by the device that fired it.
+
+### The Web Server's API
+
+The web server's API is described in OpenAPI, and shown on a Swagger page, to read and to try each request from the browser:
+
+- <http://localhost:8090/docs>: the Swagger page. The browser loads Swagger itself from cdn.jsdelivr.net, so it needs the internet; nothing is installed for it.
+- <http://localhost:8090/openapi.json>: the description, for other tools, e.g. a client generator. It is [`src/stepit_camera/src/openapi.json`](src/stepit_camera/src/openapi.json), compiled into the server.
+
+| Request | What it gives |
+|---|---|
+| `GET /` | The test page, once it is built. |
+| `GET /pictures/<path>` | A picture, at its path in `download_directory`. A `Range` header reads only a part of it. |
+| `GET /pictures/` | What `download_directory` holds, as JSON. |
+| `GET /pictures/<folder>/` | What a folder of it holds, as JSON. The path ends with a slash: without it, it names a file. |
+| `GET /openapi.json`, `GET /docs` | The description of the API, and its Swagger page. |
+
+A folder's listing gives its folders, and its files with their sizes, in bytes, and when they last changed, in UTC, all sorted by path:
+
+```bash
+curl http://localhost:8090/pictures/2026-10-06/
+```
+
+```json
+{
+  "folder": "2026-10-06",
+  "folders": ["series_01"],
+  "files": [
+    { "path": "IMG_0042.CR2", "size": 25843210, "modified": "2026-10-06T15:20:04Z" }
+  ]
+}
+```
+
+`?recursive=1` lists everything below the folder in one answer, the paths relative to it, e.g. every picture the camera saved, with `/pictures/?recursive=1`. Hidden files and folders, whose name starts with a dot, are left out, e.g. a file a program is still writing under a temporary name. A folder outside `download_directory`, with `..` or through a link, is not found, as a file there is not.
 
 ### Exposure
 

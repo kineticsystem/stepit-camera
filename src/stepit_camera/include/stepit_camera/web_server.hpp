@@ -41,6 +41,14 @@ namespace stepit_camera
  * - `GET /pictures/<name>`: a picture of `pictures_directory`, e.g.
  *   `/pictures/IMG_0042.CR2`. `Range` requests are served, so that a page can
  *   read only a part of a large file, e.g. the JPEG preview inside a RAW.
+ * - `GET /pictures/<folder>/`, the path ending with a slash: what a folder of
+ *   the pictures holds, as JSON, e.g. `/pictures/` or `/pictures/2026-10-06/`:
+ *   `{"folder": "2026-10-06", "folders": [...], "files": [{"path": ...,
+ *   "size": ..., "modified": ...}]}`, the paths relative to the folder, the
+ *   times in ISO 8601 and UTC. `?recursive=1` lists everything below it. Hidden
+ *   files and folders, whose name starts with a dot, are left out.
+ * - `GET /openapi.json`: the description of this API, in OpenAPI 3.0, from
+ *   src/openapi.json; `GET /docs`: a Swagger UI page of it.
  *
  * Every response allows any origin, so that a page served by another server,
  * e.g. by another application, can read the pictures too.
