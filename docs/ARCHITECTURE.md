@@ -102,7 +102,7 @@ flowchart TB
     Page["web/dist<br/>the test page"] --> Web
     Video -- "MJPEG" --> Browser["Web pages<br/>the test page"]
     Bridge <-- "services, parameters<br/>picture" --> Browser
-    Web -- "the page, the pictures" --> Browser
+    Web -- "the page, the pictures,<br/>the listings, the API" --> Browser
 
     classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
 ```
@@ -416,14 +416,20 @@ The node saves a picture under its name on the camera, and never overwrites a fi
 
 ## The Web Server
 
-`web_server` is a second executable of the package, launched next to the node, with [cpp-httplib](https://github.com/yhirose/cpp-httplib). `WebServer` serves two folders:
+`web_server` is a second executable of the package, launched next to the node, with [cpp-httplib](https://github.com/yhirose/cpp-httplib). `WebServer` serves two folders, what one of them holds, and the description of its API:
 
 - `/`: the test page, `web/dist`, as `build` bundles it;
-- `/pictures/<relative_path>`: the pictures, `download_directory` and its subfolders, read from the same `camera.yaml` as the node.
+- `/pictures/<relative_path>`: the pictures, `download_directory` and its subfolders, read from the same `camera.yaml` as the node;
+- `/pictures/` and `/pictures/<folder>/`: what that folder, or one of its folders, holds, as JSON;
+- `/openapi.json` and `/docs`: the description of the API, and a Swagger page of it.
 
 It serves the files as they are on disk, with `Range` requests, so that the test page reads only the JPEG preview of a RAW file: its location is in the first 64 KB of the file, and the preview of a 5D Mark II is about 1.4 MB of a 30 MB file. Every response allows any origin, and exposes `Content-Range`, so that a page served elsewhere, e.g. by another application, can load the pictures too.
 
 The server is a process of its own, rather than a thread of the camera node: the node's threads stay those that own the camera and spin ROS, and the server can be left out with `web:=false`. It is a ROS node only to read its parameters from the same file and be launched the same way; it has no topic nor service.
+
+**The listing of a folder.** cpp-httplib serves the files of a mount point itself, and passes on a request it finds no file for: a path that ends with a slash, a folder, reaches the handler of `/pictures/((?:.+/)?)`. It lists the folder's entries with `std::filesystem`, or everything below it with `?recursive=1`, with each file's size and its last change from `stat()`, in UTC, sorted by path, and writes the JSON itself, a few lines with no library. It finds the folder as it would a file, and refuses the rest: an absolute path, `..`, a hidden folder, or a folder whose canonical path, links followed, is not under `download_directory`'s. Hidden entries, whose name starts with a dot, are left out, so that a program writing a file under a temporary name, e.g. `.IMG_0001.CR2.part`, and renaming it once whole, never shows it half written. The listing reads the disk at every request: it cannot go out of date, and a folder of a few thousand pictures is listed in milliseconds.
+
+**The description of the API.** [`src/openapi.json`](../src/stepit_camera/src/openapi.json) describes every route in OpenAPI 3.0, written by hand: cpp-httplib has no description of its own routes to generate one from. CMake reads it into a string, through `openapi.hpp.in`, so the server serves it wherever it runs, even without the test page. `/docs` is Swagger UI's page around it; the browser loads Swagger UI, at a fixed version, from cdn.jsdelivr.net, so that nothing of it is in the repo or the image, at the price of the internet for that page. `test_web_server` checks that every route is in the description.
 
 Two details of cpp-httplib matter. It sets `SO_REUSEPORT` by default, which lets a second server take the same port and share the requests with the first one, e.g. a server left over from a failed launch: `WebServer` sets `SO_REUSEADDR` only, so that such a server fails with a clear message. And its file extensions are case sensitive, while a Canon names its files in capitals, e.g. `IMG_0001.CR2`: both spellings are mapped.
 
@@ -483,7 +489,7 @@ The tests run against the fake camera, so they need no hardware:
 | `test_fake_camera` | The fake camera behaves as the driver expects a camera to: live view, settings, events, unplugging. |
 | `test_camera_driver` | The loop: streaming on request and at the requested rate, downloading while streaming, deleting after download, tasks and their errors, reconnecting, stopping cleanly. |
 | `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters, the folder of the pictures set while running. |
-| `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, a picture in a subfolder, nothing served outside the two folders, a port already in use. |
+| `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, a picture in a subfolder, nothing served outside the two folders, a port already in use; the listing of a folder, of the folder of pictures and of everything below one, hidden entries left out, nothing listed outside the pictures, even through a link; the description of the API, with every route, and its Swagger page. |
 
 The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#tests).
 
@@ -496,6 +502,8 @@ The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#t
 **Another camera** that libgphoto2 supports needs no code, as long as it has the same setting names. Canon EOS cameras share them; other brands may not, e.g. `f-number` instead of `aperture`.
 
 **Another way to reach a camera**, e.g. Canon's own SDK, is another implementation of `Camera`. The driver and the node do not change.
+
+**A new route of the web server** is a handler in `WebServer`'s constructor, a test in `test_web_server`, and its description in [`src/openapi.json`](../src/stepit_camera/src/openapi.json), whose path `DescribesItsApi` checks is there.
 
 ## Design Decisions and Trade-offs
 

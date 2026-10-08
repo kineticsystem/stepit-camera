@@ -39,6 +39,13 @@ target_include_directories(stepit_camera PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
+# The description of the web server's API, src/openapi.json, compiled into the
+# library as a string, so that the web server serves it wherever it runs.
+file(READ src/openapi.json OPENAPI_JSON)
+configure_file(src/openapi.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/stepit_camera/openapi.hpp @ONLY)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS src/openapi.json src/openapi.hpp.in)
+target_include_directories(stepit_camera PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
 target_link_libraries(stepit_camera
   PUBLIC
   rclcpp::rclcpp

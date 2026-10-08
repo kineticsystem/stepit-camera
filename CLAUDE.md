@@ -67,6 +67,9 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
   of base64. Hence `download_directory` cannot be empty.
 - `web_server` (cpp-httplib) must keep `SO_REUSEADDR` only: httplib's default `SO_REUSEPORT` lets
   a leftover server share the port silently.
+- **Every route of `web_server` is described in `src/stepit_camera/src/openapi.json`**, served at
+  `/openapi.json` and shown at `/docs` (Swagger UI): a new route goes there too, and into the path
+  list of the test `DescribesItsApi`.
 
 ## The test page (`web/`)
 

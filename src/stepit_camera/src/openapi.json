@@ -1,0 +1,166 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StepIt Camera web server",
+    "version": "0.1.0",
+    "description": "The web server of StepIt Camera, the program `web_server`: the test page, the pictures the driver saved in its folder of pictures, `download_directory`, and what that folder holds. Every response allows any origin, so that a page served elsewhere can read the pictures too. It has no password: it serves anyone on the network.",
+    "license": { "name": "MIT" }
+  },
+  "tags": [
+    { "name": "Pictures", "description": "The pictures the driver saved, and the folders they are in." },
+    { "name": "Page", "description": "The test page, and this description." }
+  ],
+  "paths": {
+    "/pictures/{path}": {
+      "get": {
+        "tags": ["Pictures"],
+        "summary": "A picture",
+        "description": "A file of the folder of pictures, at its path relative to it, e.g. `IMG_0042.CR2` or `2026-10-06/IMG_0042.CR2`. A `Range` request reads only a part of it, e.g. the JPEG preview inside a RAW file. A path outside the folder of pictures, e.g. with `..`, is not found.",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "description": "The picture's path in the folder of pictures, folders and all.",
+            "schema": { "type": "string" },
+            "example": "IMG_0042.CR2"
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "description": "Only these bytes of the file, e.g. `bytes=0-65535`.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whole file.",
+            "content": {
+              "image/jpeg": { "schema": { "type": "string", "format": "binary" } },
+              "image/x-canon-cr2": { "schema": { "type": "string", "format": "binary" } },
+              "application/octet-stream": { "schema": { "type": "string", "format": "binary" } }
+            }
+          },
+          "206": {
+            "description": "The bytes asked for. `Content-Range` says which, and how large the file is, e.g. `bytes 0-65535/25843210`.",
+            "headers": {
+              "Content-Range": { "schema": { "type": "string" }, "description": "The bytes sent, and the file's size." }
+            }
+          },
+          "404": { "description": "No such file in the folder of pictures." }
+        }
+      }
+    },
+    "/pictures/": {
+      "get": {
+        "tags": ["Pictures"],
+        "summary": "The folder of pictures",
+        "description": "What the folder of pictures holds: its folders, and its files with their sizes and when they changed. Hidden files and folders, whose name starts with a dot, e.g. a file still being written under a temporary name, are left out.",
+        "parameters": [ { "$ref": "#/components/parameters/recursive" } ],
+        "responses": {
+          "200": {
+            "description": "The folder's content.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Listing" } } }
+          }
+        }
+      }
+    },
+    "/pictures/{folder}/": {
+      "get": {
+        "tags": ["Pictures"],
+        "summary": "A folder of the pictures",
+        "description": "What a folder of the pictures holds, as for `/pictures/`. The path ends with a slash: without it, the path names a file. A folder outside the folder of pictures, even through a link, or a hidden one, is not found.",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "description": "The folder's path in the folder of pictures, e.g. `2026-10-06` or `2026-10-06/series_01`.",
+            "schema": { "type": "string" },
+            "example": "2026-10-06"
+          },
+          { "$ref": "#/components/parameters/recursive" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The folder's content.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Listing" } } }
+          },
+          "404": { "description": "No such folder in the folder of pictures." }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": ["Page"],
+        "summary": "The test page",
+        "description": "The camera's test page, once it is built; the files it loads are served the same way, by their paths.",
+        "responses": {
+          "200": { "description": "The page.", "content": { "text/html": {} } },
+          "404": { "description": "The test page is not built." }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["Page"],
+        "summary": "This description, to read and try",
+        "description": "A Swagger UI page of this description. The browser loads Swagger UI itself from cdn.jsdelivr.net.",
+        "responses": { "200": { "description": "The page.", "content": { "text/html": {} } } }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": ["Page"],
+        "summary": "This description",
+        "description": "This description, in OpenAPI 3.0.",
+        "responses": { "200": { "description": "The description.", "content": { "application/json": {} } } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "recursive": {
+        "name": "recursive",
+        "in": "query",
+        "required": false,
+        "description": "`1` or `true`: everything below the folder, in one answer, the paths relative to it.",
+        "schema": { "type": "boolean", "default": false }
+      }
+    },
+    "schemas": {
+      "Listing": {
+        "type": "object",
+        "required": ["folder", "folders", "files"],
+        "properties": {
+          "folder": {
+            "type": "string",
+            "description": "The folder listed, relative to the folder of pictures; empty for the folder of pictures itself.",
+            "example": "2026-10-06"
+          },
+          "folders": {
+            "type": "array",
+            "description": "Its folders, their paths relative to it, sorted.",
+            "items": { "type": "string" },
+            "example": ["series_01"]
+          },
+          "files": {
+            "type": "array",
+            "description": "Its files, sorted by path.",
+            "items": { "$ref": "#/components/schemas/File" }
+          }
+        }
+      },
+      "File": {
+        "type": "object",
+        "required": ["path", "size", "modified"],
+        "properties": {
+          "path": { "type": "string", "description": "The file's path, relative to the folder listed.", "example": "series_01/IMG_0042.CR2" },
+          "size": { "type": "integer", "format": "int64", "description": "Its size, in bytes.", "example": 25843210 },
+          "modified": { "type": "string", "description": "When it last changed, in ISO 8601 and UTC.", "example": "2026-10-06T15:20:04Z" }
+        }
+      }
+    }
+  }
+}
