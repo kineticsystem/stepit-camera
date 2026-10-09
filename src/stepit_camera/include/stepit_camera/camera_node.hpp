@@ -35,6 +35,7 @@
 #include "stepit_camera/camera_driver.hpp"
 #include "stepit_camera/fake_camera.hpp"
 #include "stepit_camera/settings.hpp"
+#include "stepit_camera_msgs/msg/camera_status.hpp"
 #include "stepit_camera_msgs/msg/picture.hpp"
 #include "stepit_camera_msgs/srv/get_settings.hpp"
 
@@ -57,6 +58,9 @@ namespace stepit_camera
  *   and the values they accept.
  * - `~/take_picture` (std_srvs/Trigger): release the shutter over USB, for a
  *   test shot. The picture comes on `~/picture`, like any other.
+ * - `~/status` (stepit_camera_msgs/CameraStatus): whether a camera is
+ *   connected, and why not. Latched, published when it changes and every
+ *   second.
  *
  * The exposure is set through the parameters `iso`, `shutter_speed`,
  * `aperture`, `exposure_compensation` and `white_balance`. A value the camera does not accept
@@ -67,7 +71,14 @@ class CameraNode : public rclcpp::Node
 public:
   explicit CameraNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
 
+  /// @brief The node on the given camera, e.g. a fake one a test unplugs; nullptr for the one `fake_camera` chooses.
+  CameraNode(const rclcpp::NodeOptions& options, std::unique_ptr<Camera> camera);
+
 private:
+  /// @brief Record whether a camera is connected, and publish it when it changed.
+  void setStatus(bool connected, const std::string& device, const std::string& message);
+  void publishStatus();
+
   /// @brief Configure the camera once it is connected: where to store pictures, and the exposure.
   void onConnected(Camera& camera);
 
@@ -101,6 +112,11 @@ private:
 
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr preview_publisher_;
   rclcpp::Publisher<stepit_camera_msgs::msg::Picture>::SharedPtr picture_publisher_;
+  rclcpp::Publisher<stepit_camera_msgs::msg::CameraStatus>::SharedPtr status_publisher_;
+  rclcpp::TimerBase::SharedPtr status_timer_;
+  /// The status last set, written by the driver's thread, read by the executor's.
+  stepit_camera_msgs::msg::CameraStatus status_;
+  std::mutex status_mutex_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service_;
   rclcpp::Service<stepit_camera_msgs::srv::GetSettings>::SharedPtr get_settings_service_;

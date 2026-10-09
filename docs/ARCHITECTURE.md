@@ -116,6 +116,7 @@ The node's interface:
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
+| `~/status` | `stepit_camera_msgs/CameraStatus` topic | Whether a camera is connected, its model, and why not: transient local, when it changes and every second. |
 | `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
 | `folder` | parameter | The subfolder of `download_directory` the next pictures go into; it can change while the camera runs. |
 
@@ -462,7 +463,7 @@ The callback cannot read the ROS parameters from the driver's thread, since `set
 
 The camera goes away all the time in practice: it is switched off, it goes to sleep, the cable is pulled. The driver handles it in one place, the loop:
 
-- A **fatal** error closes the camera, drops the queued tasks, so that their callers get a `CameraError` instead of waiting, and reports `on_disconnected`. The loop then tries to open the camera again every `reconnect_period`, and configures it again when it comes back.
+- A **fatal** error closes the camera, drops the queued tasks, so that their callers get a `CameraError` instead of waiting, and reports `on_disconnected`, which the node publishes on `~/status` with the error. The loop then tries to open the camera again every `reconnect_period`, and configures it again when it comes back, which `on_connected` publishes too. `~/status` also comes every second, from a timer of the node, so that a client that stops receiving it knows the node has stopped.
 - A **non-fatal** error is reported as a warning, and the loop carries on.
 - A **frame** that fails is not fatal on its own, because the camera is busy for a moment after each shot, while it writes the picture. Only `max_preview_failures` (5) failures in a row count as a lost connection. After a failed frame, the driver switches the live view off, so that the next frame starts it again: a Canon EOS does not start it again by itself after a shot.
 
@@ -488,7 +489,7 @@ The tests run against the fake camera, so they need no hardware:
 | `test_settings` | Matching values to choices, the capture target, expanding `~`, saving pictures without overwriting, the folders accepted and refused. |
 | `test_fake_camera` | The fake camera behaves as the driver expects a camera to: live view, settings, events, unplugging. |
 | `test_camera_driver` | The loop: streaming on request and at the requested rate, downloading while streaming, deleting after download, tasks and their errors, reconnecting, stopping cleanly. |
-| `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters, the folder of the pictures set while running. |
+| `test_camera_node` | The ROS2 interface end to end: the services, the topics, the saved files and the parameters, the folder of the pictures set while running, and the status of a camera unplugged and plugged in again, through a `FakeCamera` handed to the node. |
 | `test_web_server` | The page and the pictures over HTTP: ranges, content types, the origin headers, a picture in a subfolder, nothing served outside the two folders, a port already in use; the listing of a folder, of the folder of pictures and of everything below one, hidden entries left out, nothing listed outside the pictures, even through a link; the description of the API, with every route, and its Swagger page. |
 
 The test page has tests of its own, with vitest: see [WEB_PAGE.md](WEB_PAGE.md#tests).

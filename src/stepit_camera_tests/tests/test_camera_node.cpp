@@ -36,6 +36,8 @@
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <stepit_camera/camera_node.hpp>
+#include <stepit_camera/fake_camera.hpp>
+#include <stepit_camera_msgs/msg/camera_status.hpp>
 #include <stepit_camera_msgs/msg/picture.hpp>
 #include <stepit_camera_msgs/srv/get_settings.hpp>
 
@@ -46,6 +48,7 @@ namespace stepit_camera::test
 
 namespace fs = std::filesystem;
 using std_srvs::srv::Trigger;
+using stepit_camera_msgs::msg::CameraStatus;
 using stepit_camera_msgs::msg::Picture;
 using stepit_camera_msgs::srv::GetSettings;
 
@@ -85,7 +88,7 @@ protected:
     fs::remove_all(folder_);
   }
 
-  void start(std::vector<rclcpp::Parameter> parameters = {})
+  void start(std::vector<rclcpp::Parameter> parameters = {}, std::unique_ptr<Camera> camera = nullptr)
   {
     parameters.emplace_back("fake_camera", true);
     parameters.emplace_back("download_directory", folder_.string());
@@ -95,7 +98,7 @@ protected:
     rclcpp::NodeOptions options;
     options.arguments({ "--ros-args", "-r", "__ns:=" + namespace_ });
     options.parameter_overrides(parameters);
-    camera_ = std::make_shared<CameraNode>(options);
+    camera_ = std::make_shared<CameraNode>(options, std::move(camera));
 
     client_ = std::make_shared<rclcpp::Node>("client", namespace_);
     preview_subscription_ = client_->create_subscription<sensor_msgs::msg::CompressedImage>(
@@ -109,6 +112,12 @@ protected:
                                                                     std::lock_guard<std::mutex> lock(mutex_);
                                                                     pictures_.push_back(picture);
                                                                   });
+
+    status_subscription_ = client_->create_subscription<CameraStatus>(
+        "camera/status", rclcpp::QoS(1).reliable().transient_local(), [this](CameraStatus::ConstSharedPtr status) {
+          std::lock_guard<std::mutex> lock(mutex_);
+          statuses_.push_back(status);
+        });
 
     executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(camera_);
@@ -143,6 +152,13 @@ protected:
     return "";
   }
 
+  /// @brief The last status received, if any.
+  CameraStatus::ConstSharedPtr lastStatus()
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return statuses_.empty() ? nullptr : statuses_.back();
+  }
+
   std::vector<Picture::ConstSharedPtr> pictures()
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -155,6 +171,8 @@ protected:
   rclcpp::Node::SharedPtr client_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr preview_subscription_;
   rclcpp::Subscription<Picture>::SharedPtr picture_subscription_;
+  rclcpp::Subscription<CameraStatus>::SharedPtr status_subscription_;
+  std::vector<CameraStatus::ConstSharedPtr> statuses_;
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
   std::thread spinner_;
 
@@ -310,6 +328,48 @@ TEST_F(CameraNodeTest, TheSettingsListTheirChoices)
   EXPECT_EQ(response->settings[2].name, "aperture");
   EXPECT_EQ(response->settings[3].name, "exposure_compensation");
   EXPECT_EQ(response->settings[4].name, "white_balance");
+}
+
+TEST_F(CameraNodeTest, TheStatusTellsThatTheCameraIsConnected)
+{
+  start();
+  ASSERT_TRUE(waitUntil([this] { return lastStatus() && lastStatus()->connected; }));
+  EXPECT_FALSE(lastStatus()->device.empty()) << "the model of the camera";
+  EXPECT_EQ(lastStatus()->message, "");
+}
+
+TEST_F(CameraNodeTest, TheStatusFollowsACameraUnpluggedAndPluggedInAgain)
+{
+  auto camera = std::make_unique<FakeCamera>();
+  auto* fake = camera.get();
+  start({}, std::move(camera));
+  ASSERT_TRUE(waitUntil([this] { return lastStatus() && lastStatus()->connected; }));
+
+  fake->setConnected(false);
+  ASSERT_TRUE(waitUntil([this] { return lastStatus() && !lastStatus()->connected; }));
+  EXPECT_EQ(lastStatus()->message.rfind("Camera disconnected: ", 0), 0u) << lastStatus()->message;
+  EXPECT_EQ(lastStatus()->device, "");
+
+  fake->setConnected(true);
+  EXPECT_TRUE(waitUntil([this] { return lastStatus() && lastStatus()->connected; }));
+}
+
+TEST_F(CameraNodeTest, TheStatusOfAMissingCameraSaysSo)
+{
+  auto camera = std::make_unique<FakeCamera>();
+  camera->setConnected(false);
+  start({}, std::move(camera));
+  ASSERT_TRUE(waitUntil([this] { return lastStatus() != nullptr; }));
+  EXPECT_FALSE(lastStatus()->connected);
+  EXPECT_FALSE(lastStatus()->message.empty());
+}
+
+TEST_F(CameraNodeTest, TheStatusIsPublishedEverySecond)
+{
+  start();
+  std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+  std::lock_guard<std::mutex> lock(mutex_);
+  EXPECT_GE(statuses_.size(), 3u);
 }
 
 }  // namespace stepit_camera::test
