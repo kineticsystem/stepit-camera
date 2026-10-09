@@ -122,7 +122,9 @@ protected:
       sizes_.push_back(data.size());
     };
     driver_ = std::make_unique<CameraDriver>(std::make_unique<SharedCamera>(camera_), options, callbacks);
-    ASSERT_TRUE(waitUntil([this] { return driver_->isConnected(); }));
+    // The driver is connected before it calls on_connected: wait for the
+    // callback, which comes last.
+    ASSERT_TRUE(waitUntil([this] { return connections_ == 1; }));
   }
 
   std::vector<std::string> pictures()
@@ -145,6 +147,7 @@ TEST_F(CameraDriverTest, ItConnectsToTheCamera)
 {
   start();
   EXPECT_EQ(connections_, 1);
+  EXPECT_TRUE(driver_->isConnected());
   EXPECT_TRUE(camera_->isOpen());
 }
 
@@ -258,13 +261,14 @@ TEST_F(CameraDriverTest, ItReconnectsWhenTheCameraComesBack)
   ASSERT_TRUE(waitUntil([this] { return frames_ >= 1; }));
 
   camera_->setConnected(false);
-  ASSERT_TRUE(waitUntil([this] { return !driver_->isConnected(); }));
-  EXPECT_EQ(disconnections_, 1);
+  // The driver is disconnected before it calls on_disconnected.
+  ASSERT_TRUE(waitUntil([this] { return disconnections_ == 1; }));
+  EXPECT_FALSE(driver_->isConnected());
   EXPECT_THROW(driver_->run([](Camera& camera) { return camera.getSetting("iso"); }), CameraError);
 
   camera_->setConnected(true);
-  ASSERT_TRUE(waitUntil([this] { return driver_->isConnected(); }));
-  EXPECT_EQ(connections_, 2);
+  ASSERT_TRUE(waitUntil([this] { return connections_ == 2; }));
+  EXPECT_TRUE(driver_->isConnected());
 
   // It still streams, and still downloads.
   const int frames = frames_;
@@ -300,8 +304,8 @@ TEST_F(CameraDriverTest, ItWaitsForACameraToBePluggedIn)
   EXPECT_EQ(connections_, 0);
 
   camera_->setConnected(true);
-  ASSERT_TRUE(waitUntil([this] { return driver_->isConnected(); }));
-  EXPECT_EQ(connections_, 1);
+  ASSERT_TRUE(waitUntil([this] { return connections_ == 1; }));
+  EXPECT_TRUE(driver_->isConnected());
 }
 
 }  // namespace stepit_camera::test
