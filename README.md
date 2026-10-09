@@ -19,6 +19,7 @@
   - [Pictures](#pictures)
   - [The Web Server's API](#the-web-servers-api)
   - [Exposure](#exposure)
+  - [Status](#status)
 - [The Test Page](#the-test-page)
 - [Parameters](#parameters)
 - [Troubleshooting](#troubleshooting)
@@ -269,6 +270,14 @@ ros2 service call /camera/get_settings stepit_camera_msgs/srv/GetSettings
 
 The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied every time the camera connects. An empty value leaves the camera as it is.
 
+### Status
+
+The driver tells whether it talks to a camera on `/camera/status` (`stepit_camera_msgs/msg/CameraStatus`): `connected`, the camera's model in `device`, and in `message` why it is not connected, e.g. the error with which the camera was lost. The topic keeps its last message for a client that subscribes late, and comes again every second, so that a client that stops receiving it knows the driver has stopped:
+
+```
+ros2 topic echo /camera/status --qos-durability transient_local
+```
+
 ## The Test Page
 
 The test page, in [`web`](web), is a web page to try the camera and the driver from a browser. It is served by the driver's web server, on <http://localhost:8090>, once `build` has built it:
@@ -325,7 +334,7 @@ The web server, `/web_server`, reads `download_directory` from the same file, an
 
 ## Troubleshooting
 
-**The camera is never found**, and the driver keeps _Waiting for a camera_. Check that the host sees it:
+**The camera is never found**, the driver keeps _Waiting for a camera_, and `/camera/status` says it is not connected. Check that the host sees it:
 
 ```
 lsusb

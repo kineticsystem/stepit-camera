@@ -77,7 +77,12 @@ std::optional<std::string> parameterText(const rclcpp::ParameterValue& value)
   }
 }
 
-CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camera", options)
+CameraNode::CameraNode(const rclcpp::NodeOptions& options) : CameraNode(options, nullptr)
+{
+}
+
+CameraNode::CameraNode(const rclcpp::NodeOptions& options, std::unique_ptr<Camera> camera)
+  : rclcpp::Node("camera", options)
 {
   const auto read_only = [](const std::string& description) {
     rcl_interfaces::msg::ParameterDescriptor descriptor;
@@ -138,6 +143,11 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
 
   preview_publisher_ = create_publisher<sensor_msgs::msg::CompressedImage>("~/preview/compressed", rclcpp::QoS(1));
   picture_publisher_ = create_publisher<stepit_camera_msgs::msg::Picture>("~/picture", rclcpp::QoS(10));
+  status_publisher_ =
+      create_publisher<stepit_camera_msgs::msg::CameraStatus>("~/status", rclcpp::QoS(1).reliable().transient_local());
+  setStatus(false, "", "No camera: is it switched on, and connected over USB?");
+  // Every second, so that a page knows the node is alive.
+  status_timer_ = create_wall_timer(std::chrono::seconds(1), [this] { publishStatus(); });
 
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -150,13 +160,12 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
   take_picture_service_ =
       create_service<std_srvs::srv::Trigger>("~/take_picture", std::bind(&CameraNode::takePicture, this, _1, _2));
 
-  std::unique_ptr<Camera> camera;
-  if (fake_camera)
+  if (!camera && fake_camera)
   {
     camera = std::make_unique<FakeCamera>();
     RCLCPP_INFO(get_logger(), "Running a fake camera");
   }
-  else
+  else if (!camera)
   {
     camera = std::make_unique<GPhotoCamera>();
   }
@@ -165,6 +174,7 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
   callbacks.on_connected = [this](Camera& connected) { onConnected(connected); };
   callbacks.on_disconnected = [this](const std::string& reason) {
     RCLCPP_WARN(get_logger(), "Camera disconnected: %s", reason.c_str());
+    setStatus(false, "", "Camera disconnected: " + reason);
   };
   callbacks.on_preview = [this](std::vector<uint8_t>&& frame) { onPreview(std::move(frame)); };
   callbacks.on_picture = [this](const CameraFile& file, std::vector<uint8_t>&& data) {
@@ -183,9 +193,37 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options) : rclcpp::Node("camer
   }
 }
 
+void CameraNode::setStatus(bool connected, const std::string& device, const std::string& message)
+{
+  {
+    std::lock_guard<std::mutex> lock(status_mutex_);
+    if (status_.connected == connected && status_.device == device && status_.message == message)
+    {
+      return;
+    }
+    status_.connected = connected;
+    status_.device = device;
+    status_.message = message;
+  }
+  publishStatus();
+}
+
+void CameraNode::publishStatus()
+{
+  stepit_camera_msgs::msg::CameraStatus status;
+  {
+    std::lock_guard<std::mutex> lock(status_mutex_);
+    status_.header.stamp = now();
+    status_.header.frame_id = frame_id_;
+    status = status_;
+  }
+  status_publisher_->publish(status);
+}
+
 void CameraNode::onConnected(Camera& camera)
 {
   RCLCPP_INFO(get_logger(), "Camera connected: %s", camera.model().c_str());
+  setStatus(true, camera.model(), "");
 
   // Where the camera stores a picture. Pictures in its memory only are lost if
   // they cannot be downloaded, but they do not fill the card up.
