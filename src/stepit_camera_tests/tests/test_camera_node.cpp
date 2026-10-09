@@ -123,6 +123,10 @@ protected:
     executor_->add_node(camera_);
     executor_->add_node(client_);
     spinner_ = std::thread([this] { executor_->spin(); });
+    // TearDown's cancel() is lost if spin() has not started yet, which then
+    // spins for ever: a test that ends at once, e.g. one that only sets a
+    // parameter, hung in TearDown on joining the spinner.
+    ASSERT_TRUE(waitUntil([this] { return executor_->is_spinning(); }));
   }
 
   /// @brief Call a service of the camera and return its response.
