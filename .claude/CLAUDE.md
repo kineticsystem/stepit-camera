@@ -71,6 +71,16 @@ See `docs/ARCHITECTURE.md`. The points that are easy to break:
   `/openapi.json` and shown at `/docs` (Swagger UI): a new route goes there too, and into the path
   list of the test `DescribesItsApi`.
 
+## Architecture and Review Documents
+
+For the `architect` and `reviewer` skills: what they cannot find out alone.
+
+- `docs/ARCHITECTURE.md` follows one idea: **the camera is a device that answers one request at a time**. If a change breaks it, say so in the document and to the user. The test page has its own document, `docs/WEB_PAGE.md`.
+- Its sections, in order: Introduction, The Big Picture, The Packages, The Classes, One Thread Owns the Camera, Streaming, Downloading the Pictures, The Web Server, The Exposure, Losing the Camera, The Container, Tests, How to Extend the Driver, Design Decisions and Trade-offs.
+- **The review is the last section, Review, of `docs/ARCHITECTURE.md`**, opened with the date and the commit reviewed, as in every StepIt module; not a separate `docs/Review.md`. Say whether an implementation issue is a safety issue for a rig that uses the camera, without naming the rig.
+- The points that are easy to break, under [Architecture](#architecture), are the first things to check, and the layers of the page (`ros/`, `camera/`, stores, components) are its dependency rule.
+- **Probes run in the container, never on the host.** A throwaway test is a gtest in `src/stepit_camera_tests/tests/`, added with `ament_add_gtest()` to `src/stepit_camera_tests/CMakeLists.txt`, and run with `colcon test --packages-select stepit_camera_tests --ctest-args -R <test> --event-handlers console_direct+`; for the page, a vitest test in `web/tests/`. `gphoto_camera.cpp` has no automated test: what depends on it is checked by hand, or marked "from reading".
+
 ## The test page (`web/`)
 
 See `docs/WEB_PAGE.md`. A React 19 + zustand + Vite page, TypeScript strict, tested with vitest;
