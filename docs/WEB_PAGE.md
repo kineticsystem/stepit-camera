@@ -25,75 +25,8 @@ The page tries the camera and the driver from a browser. The code that talks to 
 
 The page is a single-page React application, built into `web/dist` and served as static files by the driver's web server. It has no API of its own: the browser talks to the driver's servers directly.
 
-```mermaid
----
-config:
-  theme: base
-  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
-  flowchart:
-    padding: 20
-    nodeSpacing: 40
-    rankSpacing: 50
-  class:
-    padding: 16
-  sequence:
-    boxMargin: 12
-    boxTextMargin: 8
-    noteMargin: 28
-    messageMargin: 40
-    actorMargin: 60
-    labelBoxWidth: 56
-    labelBoxHeight: 28
-  themeVariables:
-    primaryColor: "#3b6fb6"
-    primaryTextColor: "#ffffff"
-    primaryBorderColor: "#2c5590"
-    lineColor: "#8b949e"
-    textColor: "#4d86d6"
-    actorBkg: "#3b6fb6"
-    actorBorder: "#2c5590"
-    actorTextColor: "#ffffff"
-    actorLineColor: "#8b949e"
-    signalColor: "#8b949e"
-    signalTextColor: "#4d86d6"
-    noteBkgColor: "#3b6fb6"
-    noteTextColor: "#ffffff"
-    noteBorderColor: "#2c5590"
-    secondaryColor: "#3b6fb6"
-    tertiaryColor: "#3b6fb6"
-    clusterBkg: "transparent"
-    clusterBorder: "#8b949e"
-    titleColor: "#4d86d6"
-    edgeLabelBackground: "#3b6fb6"
-    classText: "#ffffff"
-    labelBoxBkgColor: "#3b6fb6"
-    labelBoxBorderColor: "#2c5590"
-    labelTextColor: "#ffffff"
-    loopTextColor: "#4d86d6"
-    mainBkg: "#3b6fb6"
-    nodeBorder: "#2c5590"
-    nodeTextColor: "#ffffff"
-    secondaryBorderColor: "#2c5590"
-    secondaryTextColor: "#ffffff"
-    tertiaryBorderColor: "#2c5590"
-    tertiaryTextColor: "#ffffff"
-    errorBkgColor: "#3b6fb6"
-    errorTextColor: "#ffffff"
----
-flowchart TB
-    subgraph Container["StepIt Camera container"]
-        Node["camera node"] -- "saves" --> Folder["pictures/"]
-        Node -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
-        Bridge["rosbridge<br/>port 9091"] <--> Node
-        Folder --> Web["web server<br/>port 8090"]
-        Dist["web/dist"] --> Web
-    end
-    Web -- "HTML, JS<br/>the pictures" --> Browser["Browser<br/>React page"]
-    Bridge <-- "WebSocket, JSON<br/>services, parameters<br/>picture" --> Browser
-    Video -- "MJPEG" --> Browser
-
-    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
-```
+<!-- The source is diagrams/web-page.mmd: change it, then run bin/render-diagrams.sh. -->
+<p align="center"><img src="diagrams/web-page.svg" alt="In the StepIt Camera container the camera node saves the pictures and streams the live view; the browser gets the page and the pictures from the web server, the live view from web_video_server, and the services, parameters and pictures from rosbridge." width="684"></p>
 
 ## The Layers
 
@@ -141,77 +74,8 @@ The driver only sends frames while streaming is on. During a test shot, no frame
 
 ### The Test Shot
 
-```mermaid
----
-config:
-  theme: base
-  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
-  flowchart:
-    padding: 20
-    nodeSpacing: 40
-    rankSpacing: 50
-  class:
-    padding: 16
-  sequence:
-    boxMargin: 12
-    boxTextMargin: 8
-    noteMargin: 28
-    messageMargin: 40
-    actorMargin: 60
-    labelBoxWidth: 56
-    labelBoxHeight: 28
-  themeVariables:
-    primaryColor: "#3b6fb6"
-    primaryTextColor: "#ffffff"
-    primaryBorderColor: "#2c5590"
-    lineColor: "#8b949e"
-    textColor: "#4d86d6"
-    actorBkg: "#3b6fb6"
-    actorBorder: "#2c5590"
-    actorTextColor: "#ffffff"
-    actorLineColor: "#8b949e"
-    signalColor: "#8b949e"
-    signalTextColor: "#4d86d6"
-    noteBkgColor: "#3b6fb6"
-    noteTextColor: "#ffffff"
-    noteBorderColor: "#2c5590"
-    secondaryColor: "#3b6fb6"
-    tertiaryColor: "#3b6fb6"
-    clusterBkg: "transparent"
-    clusterBorder: "#8b949e"
-    titleColor: "#4d86d6"
-    edgeLabelBackground: "#3b6fb6"
-    classText: "#ffffff"
-    labelBoxBkgColor: "#3b6fb6"
-    labelBoxBorderColor: "#2c5590"
-    labelTextColor: "#ffffff"
-    loopTextColor: "#4d86d6"
-    mainBkg: "#3b6fb6"
-    nodeBorder: "#2c5590"
-    nodeTextColor: "#ffffff"
-    secondaryBorderColor: "#2c5590"
-    secondaryTextColor: "#ffffff"
-    tertiaryBorderColor: "#2c5590"
-    tertiaryTextColor: "#ffffff"
-    errorBkgColor: "#3b6fb6"
-    errorTextColor: "#ffffff"
----
-sequenceDiagram
-    participant UI as Page
-    participant Bridge as rosbridge
-    participant Node as camera node
-    participant Web as web server
-    UI->>Bridge: subscribe /camera/picture
-    UI->>Bridge: call /camera/take_picture
-    Bridge->>Node: take_picture
-    Node-->>UI: Shutter released
-    Note over Node: the camera stores the picture,<br/>the driver downloads and saves it
-    Node->>Bridge: /camera/picture
-    Bridge-->>UI: its name and path, no content
-    UI->>Web: GET /pictures/IMG_0042.CR2, the first 64 KB
-    UI->>Web: GET the range of the JPEG preview
-    UI->>Bridge: unsubscribe, 2 s later
-```
+<!-- The source is diagrams/test-shot.mmd: change it, then run bin/render-diagrams.sh. -->
+<p align="center"><img src="diagrams/test-shot.svg" alt="The page subscribes to the pictures and calls take_picture through rosbridge; the node releases the shutter, saves the picture and publishes its name, and the page reads its JPEG preview from the web server." width="655"></p>
 
 The page subscribes to `/camera/picture` only while it waits for its shot, since it only shows its own shots. It subscribes before releasing the shutter, so that the picture cannot come first, and keeps listening 2 seconds after the first file, for the second file of a RAW+JPEG shot.
 
