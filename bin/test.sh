@@ -11,6 +11,9 @@ source /opt/ros/jazzy/setup.bash
 # build/test/update aliases in the container.
 cd "$(dirname "$(readlink -f "$0")")/.."
 
+# Every diagram rendered from its source, needing no browser.
+bin/check-diagrams.sh
+
 # The test page first: colcon test-result has the last word on the exit code.
 (cd web && pnpm run typecheck && pnpm run test)
 

@@ -32,80 +32,8 @@ It follows one idea: **the camera is a device that answers one request at a time
 
 The camera is fired by an external device, plugged into its remote shutter release socket, or by its own shutter button. The driver does not decide when to take a picture: it watches the camera over USB, downloads the pictures it takes, streams its live view and changes its settings. The one exception is a test shot, `~/take_picture`, which releases the shutter over USB to check the framing and the exposure.
 
-```mermaid
----
-config:
-  theme: base
-  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
-  flowchart:
-    padding: 20
-    nodeSpacing: 40
-    rankSpacing: 50
-  class:
-    padding: 16
-  sequence:
-    boxMargin: 12
-    boxTextMargin: 8
-    noteMargin: 28
-    messageMargin: 40
-    actorMargin: 60
-    labelBoxWidth: 56
-    labelBoxHeight: 28
-  themeVariables:
-    primaryColor: "#3b6fb6"
-    primaryTextColor: "#ffffff"
-    primaryBorderColor: "#2c5590"
-    lineColor: "#8b949e"
-    textColor: "#4d86d6"
-    actorBkg: "#3b6fb6"
-    actorBorder: "#2c5590"
-    actorTextColor: "#ffffff"
-    actorLineColor: "#8b949e"
-    signalColor: "#8b949e"
-    signalTextColor: "#4d86d6"
-    noteBkgColor: "#3b6fb6"
-    noteTextColor: "#ffffff"
-    noteBorderColor: "#2c5590"
-    secondaryColor: "#3b6fb6"
-    tertiaryColor: "#3b6fb6"
-    clusterBkg: "transparent"
-    clusterBorder: "#8b949e"
-    titleColor: "#4d86d6"
-    edgeLabelBackground: "#3b6fb6"
-    classText: "#ffffff"
-    labelBoxBkgColor: "#3b6fb6"
-    labelBoxBorderColor: "#2c5590"
-    labelTextColor: "#ffffff"
-    loopTextColor: "#4d86d6"
-    mainBkg: "#3b6fb6"
-    nodeBorder: "#2c5590"
-    nodeTextColor: "#ffffff"
-    secondaryBorderColor: "#2c5590"
-    secondaryTextColor: "#ffffff"
-    tertiaryBorderColor: "#2c5590"
-    tertiaryTextColor: "#ffffff"
-    errorBkgColor: "#3b6fb6"
-    errorTextColor: "#ffffff"
----
-flowchart TB
-    Trigger["External device"] -- "shutter release cable" --> Camera["Canon EOS 5D Mark II"]
-    Camera -- "USB, PTP" --> GPhoto
-    subgraph Node["camera node"]
-        GPhoto["libgphoto2"] --> Driver["CameraDriver<br/>its own thread"]
-        Driver --> ROS["CameraNode<br/>topics, services, parameters"]
-    end
-    ROS <-- "topics, services<br/>parameters" --> Clients["Other nodes<br/>rqt_image_view"]
-    ROS -- "saves" --> Folder["pictures/"]
-    ROS -- "preview/compressed" --> Video["web_video_server<br/>port 8081"]
-    ROS <--> Bridge["rosbridge<br/>port 9091"]
-    Folder --> Web["web server<br/>port 8090"]
-    Page["web/dist<br/>the test page"] --> Web
-    Video -- "MJPEG" --> Browser["Web pages<br/>the test page"]
-    Bridge <-- "services, parameters<br/>picture" --> Browser
-    Web -- "the page, the pictures,<br/>the listings, the API" --> Browser
-
-    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
-```
+<!-- The source is diagrams/big-picture.mmd: change it, then run bin/render-diagrams.sh. -->
+<p align="center"><img src="diagrams/big-picture.svg" alt="An external device fires the Canon camera, which libgphoto2, CameraDriver and CameraNode read over USB; the node saves the pictures, streams the live view through web_video_server, and answers the web pages through rosbridge and its web server." width="770"></p>
 
 The node's interface:
 
@@ -138,80 +66,8 @@ The test page, in [`web`](../web), is not a ROS package: a `COLCON_IGNORE` keeps
 
 ## The Classes
 
-```mermaid
----
-config:
-  theme: base
-  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
-  flowchart:
-    padding: 20
-    nodeSpacing: 40
-    rankSpacing: 50
-  class:
-    padding: 16
-  sequence:
-    boxMargin: 12
-    boxTextMargin: 8
-    noteMargin: 28
-    messageMargin: 40
-    actorMargin: 60
-    labelBoxWidth: 56
-    labelBoxHeight: 28
-  themeVariables:
-    primaryColor: "#3b6fb6"
-    primaryTextColor: "#ffffff"
-    primaryBorderColor: "#2c5590"
-    lineColor: "#8b949e"
-    textColor: "#4d86d6"
-    actorBkg: "#3b6fb6"
-    actorBorder: "#2c5590"
-    actorTextColor: "#ffffff"
-    actorLineColor: "#8b949e"
-    signalColor: "#8b949e"
-    signalTextColor: "#4d86d6"
-    noteBkgColor: "#3b6fb6"
-    noteTextColor: "#ffffff"
-    noteBorderColor: "#2c5590"
-    secondaryColor: "#3b6fb6"
-    tertiaryColor: "#3b6fb6"
-    clusterBkg: "transparent"
-    clusterBorder: "#8b949e"
-    titleColor: "#4d86d6"
-    edgeLabelBackground: "#3b6fb6"
-    classText: "#ffffff"
-    labelBoxBkgColor: "#3b6fb6"
-    labelBoxBorderColor: "#2c5590"
-    labelTextColor: "#ffffff"
-    loopTextColor: "#4d86d6"
-    mainBkg: "#3b6fb6"
-    nodeBorder: "#2c5590"
-    nodeTextColor: "#ffffff"
-    secondaryBorderColor: "#2c5590"
-    secondaryTextColor: "#ffffff"
-    tertiaryBorderColor: "#2c5590"
-    tertiaryTextColor: "#ffffff"
-    errorBkgColor: "#3b6fb6"
-    errorTextColor: "#ffffff"
----
-classDiagram
-    class Camera {
-        <<interface>>
-        open()
-        close()
-        capturePreview() jpeg
-        stopPreview()
-        getSetting(name) value
-        getChoices(name) choices
-        setSetting(name, value)
-        waitForFiles(timeout) files
-        download(file) data
-        remove(file)
-    }
-    Camera <|.. GPhotoCamera
-    Camera <|.. FakeCamera
-    CameraDriver o-- Camera : owns
-    CameraNode o-- CameraDriver : owns
-```
+<!-- The source is diagrams/classes.mmd: change it, then run bin/render-diagrams.sh. -->
+<p align="center"><img src="diagrams/classes.svg" alt="CameraNode owns CameraDriver, which owns a Camera, an interface implemented by GPhotoCamera and FakeCamera." width="318"></p>
 
 ### Camera
 
@@ -251,74 +107,8 @@ It runs in the tests, and in the node with the parameter `fake_camera`, where th
 
 libgphoto2 is not thread safe, and a camera answers one request at a time over USB. The driver therefore gives the camera to a single thread, which runs this loop:
 
-```mermaid
----
-config:
-  theme: base
-  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
-  flowchart:
-    padding: 20
-    nodeSpacing: 40
-    rankSpacing: 50
-  class:
-    padding: 16
-  sequence:
-    boxMargin: 12
-    boxTextMargin: 8
-    noteMargin: 28
-    messageMargin: 40
-    actorMargin: 60
-    labelBoxWidth: 56
-    labelBoxHeight: 28
-  themeVariables:
-    primaryColor: "#3b6fb6"
-    primaryTextColor: "#ffffff"
-    primaryBorderColor: "#2c5590"
-    lineColor: "#8b949e"
-    textColor: "#4d86d6"
-    actorBkg: "#3b6fb6"
-    actorBorder: "#2c5590"
-    actorTextColor: "#ffffff"
-    actorLineColor: "#8b949e"
-    signalColor: "#8b949e"
-    signalTextColor: "#4d86d6"
-    noteBkgColor: "#3b6fb6"
-    noteTextColor: "#ffffff"
-    noteBorderColor: "#2c5590"
-    secondaryColor: "#3b6fb6"
-    tertiaryColor: "#3b6fb6"
-    clusterBkg: "transparent"
-    clusterBorder: "#8b949e"
-    titleColor: "#4d86d6"
-    edgeLabelBackground: "#3b6fb6"
-    classText: "#ffffff"
-    labelBoxBkgColor: "#3b6fb6"
-    labelBoxBorderColor: "#2c5590"
-    labelTextColor: "#ffffff"
-    loopTextColor: "#4d86d6"
-    mainBkg: "#3b6fb6"
-    nodeBorder: "#2c5590"
-    nodeTextColor: "#ffffff"
-    secondaryBorderColor: "#2c5590"
-    secondaryTextColor: "#ffffff"
-    tertiaryBorderColor: "#2c5590"
-    tertiaryTextColor: "#ffffff"
-    errorBkgColor: "#3b6fb6"
-    errorTextColor: "#ffffff"
----
-flowchart TD
-    Start{"Connected?"} -- no --> Open["Open the camera"]
-    Open -- "no camera" --> Sleep["Wait reconnect_period"] --> Start
-    Open -- ok --> Configure["on_connected:<br/>capture target, exposure"] --> Tasks
-    Start -- yes --> Tasks["Run the queued tasks"]
-    Tasks --> Frame{"Streaming and<br/>a frame due?"}
-    Frame -- yes --> Capture["Capture a frame<br/>on_preview"] --> Wait
-    Frame -- no --> Wait["Wait for new files<br/>until the next frame is due"]
-    Wait -- "files" --> Download["Download each one<br/>on_picture"] --> Start
-    Wait -- "time is up" --> Start
-
-    classDef default fill:#3b6fb6,stroke:#2c5590,color:#ffffff
-```
+<!-- The source is diagrams/thread-loop.mmd: change it, then run bin/render-diagrams.sh. -->
+<p align="center"><img src="diagrams/thread-loop.svg" alt="The loop of the camera thread: connect if needed, run the queued tasks, capture a frame when one is due, then wait for new files and download them, and start again." width="754"></p>
 
 Any other thread that needs the camera, e.g. the node changing the ISO, queues a **task** with `CameraDriver::run()`, and waits for its result. A task is a function of the camera wrapped in a `std::packaged_task`, so its return value and its exceptions reach the caller as if it had called the camera itself. The loop runs the queued tasks at every turn, and a turn lasts at most `poll_period` (100 ms) when not streaming, or until the next frame when streaming, so a task never waits long.
 
@@ -332,79 +122,8 @@ The frames are published as they come out of the camera, JPEG images in a `senso
 
 ## Downloading the Pictures
 
-```mermaid
----
-config:
-  theme: base
-  themeCSS: ".edgeLabel p { padding: 4px 10px; }"
-  flowchart:
-    padding: 20
-    nodeSpacing: 40
-    rankSpacing: 50
-  class:
-    padding: 16
-  sequence:
-    boxMargin: 12
-    boxTextMargin: 8
-    noteMargin: 28
-    messageMargin: 40
-    actorMargin: 60
-    labelBoxWidth: 56
-    labelBoxHeight: 28
-  themeVariables:
-    primaryColor: "#3b6fb6"
-    primaryTextColor: "#ffffff"
-    primaryBorderColor: "#2c5590"
-    lineColor: "#8b949e"
-    textColor: "#4d86d6"
-    actorBkg: "#3b6fb6"
-    actorBorder: "#2c5590"
-    actorTextColor: "#ffffff"
-    actorLineColor: "#8b949e"
-    signalColor: "#8b949e"
-    signalTextColor: "#4d86d6"
-    noteBkgColor: "#3b6fb6"
-    noteTextColor: "#ffffff"
-    noteBorderColor: "#2c5590"
-    secondaryColor: "#3b6fb6"
-    tertiaryColor: "#3b6fb6"
-    clusterBkg: "transparent"
-    clusterBorder: "#8b949e"
-    titleColor: "#4d86d6"
-    edgeLabelBackground: "#3b6fb6"
-    classText: "#ffffff"
-    labelBoxBkgColor: "#3b6fb6"
-    labelBoxBorderColor: "#2c5590"
-    labelTextColor: "#ffffff"
-    loopTextColor: "#4d86d6"
-    mainBkg: "#3b6fb6"
-    nodeBorder: "#2c5590"
-    nodeTextColor: "#ffffff"
-    secondaryBorderColor: "#2c5590"
-    secondaryTextColor: "#ffffff"
-    tertiaryBorderColor: "#2c5590"
-    tertiaryTextColor: "#ffffff"
-    errorBkgColor: "#3b6fb6"
-    errorTextColor: "#ffffff"
----
-sequenceDiagram
-    participant Device as External device
-    participant Camera
-    participant Driver as CameraDriver
-    participant Node as CameraNode
-    Device->>Camera: closes the shutter release contact
-    Camera->>Camera: stores IMG_0042.JPG
-    Driver->>Camera: waitForFiles()
-    Camera-->>Driver: file added: IMG_0042.JPG
-    Driver->>Camera: download(IMG_0042.JPG)
-    Camera-->>Driver: content
-    opt keep_on_camera is false
-        Driver->>Camera: remove(IMG_0042.JPG)
-    end
-    Driver->>Node: on_picture
-    Node->>Node: save into download_directory/folder
-    Node-->>Node: publish ~/picture
-```
+<!-- The source is diagrams/picture-download.mmd: change it, then run bin/render-diagrams.sh. -->
+<p align="center"><img src="diagrams/picture-download.svg" alt="The external device fires the camera, which stores the picture; CameraDriver finds it, downloads it, removes it from the card unless keep_on_camera is set, and CameraNode saves and publishes it." width="735"></p>
 
 When the camera connects, the node sets its `capturetarget`:
 

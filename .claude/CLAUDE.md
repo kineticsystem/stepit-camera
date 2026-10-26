@@ -114,5 +114,9 @@ package; a new package must be added to its package list.
 - `cpplint` runs with `--linelength=121`; `clang-format` uses the repo `.clang-format`.
 - Update the README's parameter table and `docs/ARCHITECTURE.md` when the interface changes,
   and `docs/WEB_PAGE.md` when the page changes.
+- Diagrams follow the `beautiful-mermaid-diagrams` skill. Each is an image: its source is
+  `docs/diagrams/<name>.mmd`, rendered by `bin/render-diagrams.sh` into an SVG beside it, outside
+  the container (it needs Node.js and Chrome); commit both. `bin/check-diagrams.sh`, run by
+  `bin/test.sh` and CI, fails when an SVG is older than its source.
 - **The project stands on its own.** Docs, comments and code never mention the projects that
   use it, e.g. a rig or another UI: describe the camera, the driver and their interfaces only.
