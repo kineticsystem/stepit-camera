@@ -44,7 +44,7 @@ The node's interface:
 | `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
-| `~/status` | `stepit_camera_msgs/CameraStatus` topic | Whether a camera is connected, its model, and why not: transient local, when it changes and every second. |
+| `~/status` | `stepit_camera_msgs/CameraStatus` topic | Whether a camera is connected, its model, and why not, and whether the live view is on: transient local, when it changes and every second. |
 | `iso`, `shutter_speed`, `aperture`, `exposure_compensation`, `white_balance` | parameters | The settings of the camera. |
 | `folder` | parameter | The subfolder of `download_directory` the next pictures go into; it can change while the camera runs. |
 
@@ -116,7 +116,7 @@ Any other thread that needs the camera, e.g. the node changing the ISO, queues a
 
 ## Streaming
 
-`setStreaming()` only sets a flag, which the loop reads at every turn: the services `start_streaming` and `stop_streaming` return at once, and the choice survives a disconnection. When the flag is on, the loop captures a frame every `1 / preview_rate` seconds, and spends the time in between waiting for pictures. When the flag goes off, the loop switches the live view off on the camera.
+`setStreaming()` only sets a flag, which the loop reads at every turn: the services `start_streaming` and `stop_streaming` return at once, and the choice survives a disconnection. The node publishes the flag as `streaming` on `~/status` as soon as it changes, so that every client shows the same, whoever switched it. When the flag is on, the loop captures a frame every `1 / preview_rate` seconds, and spends the time in between waiting for pictures. When the flag goes off, the loop switches the live view off on the camera.
 
 The frames are published as they come out of the camera, JPEG images in a `sensor_msgs/CompressedImage`, on `~/preview/compressed`. Tools that use `image_transport`, such as `rqt_image_view`, see them as the `compressed` transport of `~/preview`.
 

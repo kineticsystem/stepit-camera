@@ -183,7 +183,7 @@ CameraNode::CameraNode(const rclcpp::NodeOptions& options, std::unique_ptr<Camer
   callbacks.on_warning = [this](const std::string& message) { RCLCPP_WARN(get_logger(), "%s", message.c_str()); };
 
   driver_ = std::make_unique<CameraDriver>(std::move(camera), driver_options, std::move(callbacks));
-  driver_->setStreaming(stream_on_start);
+  setStreaming(stream_on_start);
 
   parameters_callback_ = add_on_set_parameters_callback(std::bind(&CameraNode::onSetParameters, this, _1));
 
@@ -204,6 +204,16 @@ void CameraNode::setStatus(bool connected, const std::string& device, const std:
     status_.connected = connected;
     status_.device = device;
     status_.message = message;
+  }
+  publishStatus();
+}
+
+void CameraNode::setStreaming(bool streaming)
+{
+  driver_->setStreaming(streaming);
+  {
+    std::lock_guard<std::mutex> lock(status_mutex_);
+    status_.streaming = streaming;
   }
   publishStatus();
 }
@@ -395,7 +405,7 @@ void CameraNode::onPicture(const CameraFile& file, std::vector<uint8_t>&& data)
 void CameraNode::startStreaming(const std::shared_ptr<std_srvs::srv::Trigger::Request>,
                                 std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-  driver_->setStreaming(true);
+  setStreaming(true);
   response->success = true;
   response->message =
       driver_->isConnected() ? "Streaming" : "The camera is not connected: streaming starts when it connects";
@@ -404,7 +414,7 @@ void CameraNode::startStreaming(const std::shared_ptr<std_srvs::srv::Trigger::Re
 void CameraNode::stopStreaming(const std::shared_ptr<std_srvs::srv::Trigger::Request>,
                                std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-  driver_->setStreaming(false);
+  setStreaming(false);
   response->success = true;
   response->message = "Not streaming";
 }

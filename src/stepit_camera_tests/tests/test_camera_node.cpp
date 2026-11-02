@@ -214,6 +214,22 @@ TEST_F(CameraNodeTest, TheLiveViewCanStartWithTheNode)
 {
   start({ rclcpp::Parameter("stream_on_start", true) });
   EXPECT_TRUE(waitUntil([this] { return frames_ >= 3; }));
+  EXPECT_TRUE(waitUntil([this] { return lastStatus() && lastStatus()->streaming; }));
+}
+
+/// The status tells whether the live view is on, at once when it changes, so
+/// that every client of the node shows the same, whoever switched it.
+TEST_F(CameraNodeTest, TheStatusTellsWhetherTheLiveViewIsOn)
+{
+  start();
+  ASSERT_TRUE(waitUntil([this] { return lastStatus() != nullptr; }));
+  EXPECT_FALSE(lastStatus()->streaming);
+
+  ASSERT_TRUE(call<Trigger>("start_streaming")->success);
+  EXPECT_TRUE(waitUntil([this] { return lastStatus()->streaming; }));
+
+  ASSERT_TRUE(call<Trigger>("stop_streaming")->success);
+  EXPECT_TRUE(waitUntil([this] { return !lastStatus()->streaming; }));
 }
 
 TEST_F(CameraNodeTest, APictureIsSavedAndPublishedWithItsPath)

@@ -15,3 +15,8 @@ string device
 
 # Why it is not connected; empty when it is.
 string message
+
+# Whether the live view is on, as ~/start_streaming, ~/stop_streaming or the
+# parameter stream_on_start last set it: frames are published on
+# ~/preview/compressed while the camera is connected.
+bool streaming

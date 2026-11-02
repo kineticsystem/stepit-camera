@@ -272,7 +272,7 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 
 ### Status
 
-The driver tells whether it talks to a camera on `/camera/status` (`stepit_camera_msgs/msg/CameraStatus`): `connected`, the camera's model in `device`, and in `message` why it is not connected, e.g. the error with which the camera was lost. The topic keeps its last message for a client that subscribes late, and comes again every second, so that a client that stops receiving it knows the driver has stopped:
+The driver tells whether it talks to a camera on `/camera/status` (`stepit_camera_msgs/msg/CameraStatus`): `connected`, the camera's model in `device`, in `message` why it is not connected, e.g. the error with which the camera was lost, and in `streaming` whether the live view is on. The topic keeps its last message for a client that subscribes late, and comes again every second, so that a client that stops receiving it knows the driver has stopped:
 
 ```
 ros2 topic echo /camera/status --qos-durability transient_local
