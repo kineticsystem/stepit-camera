@@ -59,8 +59,8 @@ namespace stepit_camera
  * - `~/take_picture` (std_srvs/Trigger): release the shutter over USB, for a
  *   test shot. The picture comes on `~/picture`, like any other.
  * - `~/status` (stepit_camera_msgs/CameraStatus): whether a camera is
- *   connected, and why not. Latched, published when it changes and every
- *   second.
+ *   connected, and why not, and whether the live view is on. Latched,
+ *   published when it changes and every second.
  *
  * The exposure is set through the parameters `iso`, `shutter_speed`,
  * `aperture`, `exposure_compensation` and `white_balance`. A value the camera does not accept
@@ -78,6 +78,8 @@ private:
   /// @brief Record whether a camera is connected, and publish it when it changed.
   void setStatus(bool connected, const std::string& device, const std::string& message);
   void publishStatus();
+  /// @brief Switch the live view on or off, and publish it in the status at once.
+  void setStreaming(bool streaming);
 
   /// @brief Configure the camera once it is connected: where to store pictures, and the exposure.
   void onConnected(Camera& camera);
