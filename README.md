@@ -170,6 +170,8 @@ ros2 service call /camera/start_streaming std_srvs/srv/Trigger
 ros2 service call /camera/stop_streaming std_srvs/srv/Trigger
 ```
 
+`stop_streaming` answers once the camera has left the live view, ready to shoot: a camera in live view ignores a shot.
+
 The frames are published as JPEG images on `/camera/preview/compressed` (`sensor_msgs/msg/CompressedImage`), exactly as the camera sends them, with no decoding. Their size depends on the camera. Watch them with:
 
 ```

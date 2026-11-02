@@ -210,12 +210,20 @@ void CameraNode::setStatus(bool connected, const std::string& device, const std:
 
 void CameraNode::setStreaming(bool streaming)
 {
-  driver_->setStreaming(streaming);
   {
     std::lock_guard<std::mutex> lock(status_mutex_);
     status_.streaming = streaming;
   }
   publishStatus();
+  if (streaming)
+  {
+    driver_->setStreaming(true);
+  }
+  else
+  {
+    // A client may shoot as soon as this returns: wait for the camera to leave the live view.
+    driver_->stopStreaming();
+  }
 }
 
 void CameraNode::publishStatus()
@@ -414,9 +422,17 @@ void CameraNode::startStreaming(const std::shared_ptr<std_srvs::srv::Trigger::Re
 void CameraNode::stopStreaming(const std::shared_ptr<std_srvs::srv::Trigger::Request>,
                                std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-  setStreaming(false);
-  response->success = true;
-  response->message = "Not streaming";
+  try
+  {
+    setStreaming(false);
+    response->success = true;
+    response->message = "Not streaming";
+  }
+  catch (const CameraError& error)
+  {
+    response->success = false;
+    response->message = std::string("The camera did not leave the live view: ") + error.what();
+  }
 }
 
 void CameraNode::getSettings(const std::shared_ptr<stepit_camera_msgs::srv::GetSettings::Request>,

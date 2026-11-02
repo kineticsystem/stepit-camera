@@ -100,6 +100,15 @@ public:
   void setStreaming(bool streaming);
   bool isStreaming() const;
 
+  /**
+   * @brief Stop the live view, and return once the camera has left it, ready
+   * to shoot through the viewfinder: setStreaming(false) only asks the
+   * driver's thread to leave it at its next turn. When the camera is not
+   * connected, it only clears the flag. Throws CameraError if the camera does
+   * not leave the live view in time.
+   */
+  void stopStreaming();
+
   bool isConnected() const;
 
   /**

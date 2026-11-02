@@ -78,7 +78,8 @@ private:
   /// @brief Record whether a camera is connected, and publish it when it changed.
   void setStatus(bool connected, const std::string& device, const std::string& message);
   void publishStatus();
-  /// @brief Switch the live view on or off, and publish it in the status at once.
+  /// @brief Switch the live view on or off, and publish it in the status at once. Off, it returns once
+  /// the camera has left the live view, and throws CameraError if it does not in time.
   void setStreaming(bool streaming);
 
   /// @brief Configure the camera once it is connected: where to store pictures, and the exposure.

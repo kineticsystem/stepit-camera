@@ -41,7 +41,7 @@ The node's interface:
 |---|---|---|
 | `~/preview/compressed` | `sensor_msgs/CompressedImage` topic | The live view, as JPEG frames, while streaming. |
 | `~/picture` | `stepit_camera_msgs/Picture` topic | Each picture the camera takes, once saved: its name, where the file is, and its path under `download_directory`, `relative_path`. |
-| `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off. |
+| `~/start_streaming`, `~/stop_streaming` | `std_srvs/Trigger` services | Switch the live view on and off; `stop_streaming` answers once the camera has left it. |
 | `~/get_settings` | `stepit_camera_msgs/GetSettings` service | The current exposure, and the values each setting accepts. |
 | `~/take_picture` | `std_srvs/Trigger` service | A test shot: release the shutter over USB. The picture comes on `~/picture`. |
 | `~/status` | `stepit_camera_msgs/CameraStatus` topic | Whether a camera is connected, its model, and why not, and whether the live view is on: transient local, when it changes and every second. |
@@ -116,7 +116,7 @@ Any other thread that needs the camera, e.g. the node changing the ISO, queues a
 
 ## Streaming
 
-`setStreaming()` only sets a flag, which the loop reads at every turn: the services `start_streaming` and `stop_streaming` return at once, and the choice survives a disconnection. The node publishes the flag as `streaming` on `~/status` as soon as it changes, so that every client shows the same, whoever switched it. When the flag is on, the loop captures a frame every `1 / preview_rate` seconds, and spends the time in between waiting for pictures. When the flag goes off, the loop switches the live view off on the camera.
+`setStreaming()` only sets a flag, which the loop reads at every turn: `start_streaming` returns at once, and the choice survives a disconnection. `stop_streaming` goes through `stopStreaming()`, which clears the flag, then switches the live view off on the driver's thread, through `run()`, and returns once the camera has left it: a client may shoot as soon as the service answers, and a camera in live view ignores a shot. When the camera is not connected, it only clears the flag. The node publishes the flag as `streaming` on `~/status` as soon as it changes, so that every client shows the same, whoever switched it. When the flag is on, the loop captures a frame every `1 / preview_rate` seconds, and spends the time in between waiting for pictures. When the flag goes off, the loop switches the live view off on the camera.
 
 The frames are published as they come out of the camera, JPEG images in a `sensor_msgs/CompressedImage`, on `~/preview/compressed`. Tools that use `image_transport`, such as `rqt_image_view`, see them as the `compressed` transport of `~/preview`.
 

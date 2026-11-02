@@ -169,6 +169,27 @@ TEST_F(CameraDriverTest, ItStreamsOnlyWhenAsked)
   EXPECT_EQ(frames_, frames);
 }
 
+TEST_F(CameraDriverTest, StoppingTheLiveViewReturnsOnceTheCameraHasLeftIt)
+{
+  start();
+  driver_->setStreaming(true);
+  ASSERT_TRUE(waitUntil([this] { return camera_->isPreviewing(); }));
+
+  driver_->stopStreaming();
+  EXPECT_FALSE(camera_->isPreviewing()) << "at once, not at the driver's next turn";
+  EXPECT_FALSE(driver_->isStreaming());
+}
+
+TEST_F(CameraDriverTest, StoppingTheLiveViewOfADisconnectedCameraOnlyClearsTheFlag)
+{
+  start();
+  camera_->setConnected(false);
+  ASSERT_TRUE(waitUntil([this] { return !driver_->isConnected(); }));
+  driver_->setStreaming(true);
+  EXPECT_NO_THROW(driver_->stopStreaming());
+  EXPECT_FALSE(driver_->isStreaming());
+}
+
 TEST_F(CameraDriverTest, TheFramesComeAtTheRequestedRate)
 {
   start();
