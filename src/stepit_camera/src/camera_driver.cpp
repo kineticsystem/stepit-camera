@@ -47,6 +47,23 @@ void CameraDriver::setStreaming(bool streaming)
   streaming_ = streaming;
 }
 
+void CameraDriver::stopStreaming()
+{
+  streaming_ = false;
+  if (!isConnected())
+  {
+    return;
+  }
+  // previewing_ belongs to the driver's thread, which run() runs on.
+  run([this](Camera& camera) {
+    if (previewing_)
+    {
+      previewing_ = false;
+      camera.stopPreview();
+    }
+  });
+}
+
 bool CameraDriver::isStreaming() const
 {
   return streaming_;

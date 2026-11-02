@@ -7,6 +7,7 @@ Each pull request has a notes file here. It keeps what the pull request does not
 | Note | Pull request |
 |---|---|
 | [017-publish-streaming.md](017-publish-streaming.md) | [#17](https://github.com/kineticsystem/stepit-camera/pull/17) The status tells whether the live view is on |
+| [018-stop-streaming-waits.md](018-stop-streaming-waits.md) | [#18](https://github.com/kineticsystem/stepit-camera/pull/18) Stopping the live view waits for the camera |
 
 ## How to Write One
 
