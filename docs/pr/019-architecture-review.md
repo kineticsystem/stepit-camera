@@ -1,6 +1,6 @@
 # A Second Check of the Architecture, and a Review
 
-Branch `architecture-review`.
+Pull request [#19](https://github.com/kineticsystem/stepit-camera/pull/19), branch `architecture-review`.
 
 ## Goal
 
