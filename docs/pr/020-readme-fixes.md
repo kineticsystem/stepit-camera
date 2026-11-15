@@ -1,6 +1,6 @@
 # The READMEs Checked Against the Code
 
-Branch `readme-fixes`.
+Pull request [#20](https://github.com/kineticsystem/stepit-camera/pull/20), branch `readme-fixes`.
 
 ## Goal
 
