@@ -57,8 +57,8 @@ flowchart TD
     Tasks("<b>Run the queued tasks</b>")
     Frame("<b>Streaming and</b><br/><b>a frame due?</b>")
     Capture("<b>Capture a frame</b><br/>on_preview")
-    Wait("<b>Wait for new files</b><br/>until the next frame is due")
-    Download("<b>Download each one</b><br/>on_picture")
+    Wait("<b>Wait for new files</b><br/>until the next frame is due,<br/>or for poll_period")
+    Download("<b>Download each one</b><br/>remove it if asked, on_picture")
 
     Start -- "no" --> Open
     Open -- "no camera" --> Sleep

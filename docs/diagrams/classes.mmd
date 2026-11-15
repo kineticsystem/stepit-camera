@@ -50,11 +50,14 @@ classDiagram
         <<interface>>
         open()
         close()
+        isOpen() bool
+        model() name
         capturePreview() jpeg
         stopPreview()
         getSetting(name) value
         getChoices(name) choices
         setSetting(name, value)
+        trigger()
         waitForFiles(timeout) files
         download(file) data
         remove(file)
