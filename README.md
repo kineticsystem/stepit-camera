@@ -82,7 +82,7 @@ The ament linters used by the hooks only exist in the container. On a host witho
 StepIt Camera is built and run inside a Docker container. It is defined in [`docker/docker-compose.yml`](docker/docker-compose.yml) and driven by the [`docker/dock.sh`](docker/dock.sh) script. See [docker/README.md](docker/README.md) for more details.
 
 > [!IMPORTANT]
-> The docker container provides a default user `developer` with password `developer`. That user may run `sudo` without being asked for it, so that the scripts in `bin` also work from a non-interactive shell, e.g.
+> The docker container provides a default user `developer` with password `developer`. That user may run `sudo` without being asked for the password, so that the scripts in `bin` also work from a non-interactive shell, e.g.
 > `docker exec stepit-camera update.sh`.
 
 Build the image and create the container. The script always mounts the repo it belongs to, so it can be called from anywhere:
@@ -113,7 +113,7 @@ Build the project: the driver with Colcon, and the test page with pnpm, into `we
 build
 ```
 
-Execute all tests, of the driver and of the test page. The driver's run against the fake camera, so they need no hardware.
+Execute all tests, of the driver and of the test page. Those of the driver run against the fake camera, so they need no hardware.
 
 ```
 test
@@ -150,7 +150,7 @@ Add `stream:=true` to start the live view as soon as the camera connects.
 
 The launch file also starts three servers for web pages, such as the [test page](#the-test-page):
 
-- the web server of this package on port 8090, which serves the test page, <http://localhost:8090>, the saved pictures, e.g. <http://localhost:8090/pictures/IMG_0001.JPG>, and what the folder of pictures holds, see [The Web Server's API](#the-web-servers-api);
+- the web server of this package on port 8090, which serves the test page, <http://localhost:8090>, the saved pictures, each at its path under `download_directory`, e.g. <http://localhost:8090/pictures/IMG_0001.JPG>, and what the folder of pictures holds, see [The Web Server's API](#the-web-servers-api);
 - [web_video_server](https://github.com/RobotWebTools/web_video_server) on port 8081, which streams the live view to a browser, e.g. <http://localhost:8081/stream?topic=/camera/preview&type=ros_compressed>;
 - [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) on port 9091, which lets a browser call the services, set the parameters and hear of the pictures. It is not on rosbridge's default port, 9090, so that it can run next to another rosbridge: a rosbridge only knows the messages installed next to it, and only this one knows the driver's messages, `stepit_camera_msgs`.
 
@@ -170,7 +170,7 @@ ros2 service call /camera/start_streaming std_srvs/srv/Trigger
 ros2 service call /camera/stop_streaming std_srvs/srv/Trigger
 ```
 
-`stop_streaming` answers once the camera has left the live view, ready to shoot: a camera in live view ignores a shot.
+`stop_streaming` answers once the camera has left the live view, ready to shoot. During the live view, a 5D Mark II ignores the shutter button on its body. A test shot over USB works, and pauses the live view. Whether the camera also ignores the remote shutter release cable during the live view is not tested yet.
 
 The frames are published as JPEG images on `/camera/preview/compressed` (`sensor_msgs/msg/CompressedImage`), exactly as the camera sends them, with no decoding. Their size depends on the camera. Watch them with:
 
@@ -221,10 +221,10 @@ The web server's API is described in OpenAPI, and shown on a Swagger page, to re
 
 | Request | What it gives |
 |---|---|
-| `GET /` | The test page, once it is built. |
+| `GET /` | The test page, once it is built; 404 until then. |
 | `GET /pictures/<path>` | A picture, at its path in `download_directory`. A `Range` header reads only a part of it. |
 | `GET /pictures/` | What `download_directory` holds, as JSON. |
-| `GET /pictures/<folder>/` | What a folder of it holds, as JSON. The path ends with a slash: without it, it names a file. |
+| `GET /pictures/<folder>/` | What a folder of it holds, as JSON. The path ends with a slash: without it, it names a file. A folder that holds an `index.html` gives that file instead. |
 | `GET /openapi.json`, `GET /docs` | The description of the API, and its Swagger page. |
 
 A folder's listing gives its folders, and its files with their sizes, in bytes, and when they last changed, in UTC, all sorted by path:
@@ -243,7 +243,7 @@ curl http://localhost:8090/pictures/2026-10-06/
 }
 ```
 
-`?recursive=1` lists everything below the folder in one answer, the paths relative to it, e.g. every picture the camera saved, with `/pictures/?recursive=1`. Hidden files and folders, whose name starts with a dot, are left out, e.g. a file a program is still writing under a temporary name. A folder outside `download_directory`, with `..` or through a link, is not found, as a file there is not.
+`?recursive=1` lists everything below the folder in one answer, the paths relative to it, e.g. every picture the camera saved, with `/pictures/?recursive=1`. Hidden files and folders, whose name starts with a dot, are left out of a listing, e.g. a file a program is still writing under a temporary name. A folder outside `download_directory`, with `..` or through a link, is not found, and neither is a file asked with `..`. A file is checked no further: a hidden file asked by its path is served, and so is a link to a file outside, see [docs/Review.md](docs/Review.md#the-web-server).
 
 ### Exposure
 
@@ -257,12 +257,14 @@ ros2 param set /camera exposure_compensation -0.3
 ros2 param set /camera white_balance Daylight
 ```
 
-A value the camera does not accept is rejected, with the values it does accept:
+While the camera is connected, a value it does not accept is rejected, with the values it does accept:
 
 ```
 $ ros2 param set /camera iso 123
 Setting parameter failed: The camera does not accept iso 123, only one of: Auto, 100, 125, 160, ...
 ```
+
+While no camera is connected, a value is kept unchecked and applied when the camera connects: one the camera does not accept is then a warning in the output of the driver.
 
 Read the current settings, and the values each one accepts right now:
 
@@ -274,7 +276,7 @@ The values in [`camera.yaml`](src/stepit_camera/config/camera.yaml) are applied 
 
 ### Status
 
-The driver tells whether it talks to a camera on `/camera/status` (`stepit_camera_msgs/msg/CameraStatus`): `connected`, the camera's model in `device`, in `message` why it is not connected, e.g. the error with which the camera was lost, and in `streaming` whether the live view is on. The topic keeps its last message for a client that subscribes late, and comes again every second, so that a client that stops receiving it knows the driver has stopped:
+The driver tells whether it talks to a camera on `/camera/status` (`stepit_camera_msgs/msg/CameraStatus`): `connected`, the camera's model in `device`, in `message` why it is not connected, e.g. the error with which the camera was lost, and in `streaming` whether the live view is asked for: it stays true while the camera is disconnected. The topic keeps its last message for a client that subscribes late, and comes again every second, so that a client that stops receiving it knows the driver has stopped:
 
 ```
 ros2 topic echo /camera/status --qos-durability transient_local
@@ -282,11 +284,11 @@ ros2 topic echo /camera/status --qos-durability transient_local
 
 ## The Test Page
 
-The test page, in [`web`](web), is a web page to try the camera and the driver from a browser. It is served by the driver's web server, on <http://localhost:8090>, once `build` has built it:
+The test page, in [`web`](web), is a web page to try the camera and the driver from a browser. It is served by the driver's web server, on <http://localhost:8090>, once `build` has built it and the driver was started after that:
 
 - **Live view** (left): what the camera sees, about 10 frames per second. It is off when the page opens: **Start** switches it on, and **Stop** switches it off again, which lowers the mirror. Once started, it starts again by itself if the driver restarts.
 - **Settings** (right): the ISO, the shutter speed, the aperture, the white balance and the exposure compensation, each with the values the camera accepts right now. These depend on the mode dial and on the lens, see [Prepare the Camera](#prepare-the-camera); a setting the camera does not let us change is greyed out. A change made on the camera itself shows up within a few seconds.
-- **Test shot**: releases the shutter and shows the picture, once saved. A JPEG is shown as it is; a RAW file is shown through the JPEG preview it carries, which the page reads from the file without loading the rest of it. The name of the file downloads it whole. The live view pauses for the shot, since the mirror moves: the last frame stays, greyed out, until the picture has come.
+- **Test shot**: releases the shutter and shows the picture, once saved. A JPEG is shown as it is; a RAW file is shown through the JPEG preview it carries, which the page reads from the file without loading the rest of it. The name of the file downloads it whole. The page looks for the picture by its file name, so it shows one only while the parameter `folder` is empty, the default, see [docs/Review.md](docs/Review.md#the-test-page). The live view pauses for the shot, since the mirror moves: the last frame stays, greyed out, until the picture has come.
 
 The gear at the top right holds the preferences of the browser: the theme, where the camera's rosbridge and web_video_server are, by default on the machine that serves the page, and the name of the camera node.
 
@@ -303,7 +305,7 @@ Other web pages can use the same servers. The web server lets pages of any origi
 | `aperture` | `""` | The aperture, e.g. `8` or `5.6`. |
 | `exposure_compensation` | `""` | The exposure compensation in stops, e.g. `-1` or `0.3`. It has no effect on M, unless the ISO is Auto. |
 | `white_balance` | `""` | The white balance, e.g. `Auto`, `Daylight` or `Cloudy`. |
-| `download_directory` | `~/ws/pictures` | Where to save the pictures, and where the web server finds them. It cannot be empty. |
+| `download_directory` | `~/ws/pictures` | Where to save the pictures, and where the web server finds them. It cannot be empty. The default is the value of `camera.yaml`: without that file, the node and the web server use `~/pictures`. |
 | `folder` | `""` | The subfolder of `download_directory` the next pictures go into, e.g. `2026-10-06/angle_01`; empty for `download_directory` itself. It can change while the driver runs. |
 | `keep_on_camera` | `true` | Store the pictures on the memory card too. When `false`, they only go to the camera's memory and are deleted once downloaded: the card never fills up, but a picture that cannot be downloaded is lost. |
 | `stream_on_start` | `false` | Start the live view as soon as the camera connects. Set by the launch argument `stream`. |
@@ -369,7 +371,7 @@ systemctl --user mask --now gvfs-gphoto2-volume-monitor.service
 
 **The white balance offers a single value.** Right after connecting, a Canon EOS may not have sent the list of its white balances yet, and libgphoto2 then offers the current one only. Read the settings again a moment later.
 
-**The test page says _The test page is not built_.** Run `build`, which builds it into `web/dist`.
+**The test page says _The test page is not built_.** Run `build`, which builds it into `web/dist`, then start the driver again: the web server looks for the page once, when it starts.
 
 **A server says its port is already in use**, e.g. _Cannot listen on 0.0.0.0:8090_. Another driver is running, maybe left over from a launch that failed: stop it, or choose other ports with the launch arguments.
 
@@ -381,7 +383,7 @@ systemctl --user mask --now gvfs-gphoto2-volume-monitor.service
 
 ## Running the Driver from Another Project
 
-Another project can run the driver in its own Docker Compose file, without copying the container's definition: its service extends the `dev` service of [`docker/docker-compose.yml`](docker/docker-compose.yml), so the Dockerfile, the mounts and the network settings stay defined here. It only replaces the command, to start the driver rather than an idle container. For example, with this repo checked out in `modules/stepit-camera`:
+Another project can run the driver in its own Docker Compose file, without copying the container's definition: its service extends the `dev` service of [`docker/docker-compose.yml`](docker/docker-compose.yml), so the Dockerfile, the mounts and the network settings stay defined here. It sets its own names, how the container stops, and the command, to start the driver rather than an idle container. For example, with this repo checked out in `modules/stepit-camera`:
 
 ```yaml
   stepit-camera:
@@ -402,17 +404,17 @@ Another project can run the driver in its own Docker Compose file, without copyi
         && exec ros2 launch stepit_camera camera.launch.py'
 ```
 
-The code has to be built in that container first, with `update.sh` and `build.sh`. Run one container or the other, not both, since both open the camera: remove the container made by this repo's `dock.sh` first, e.g. with `./docker/dock.sh stepit-camera clean`, and the other way round.
+The code has to be built in that container first, with `update.sh` and `build.sh`. Run one container or the other, not both, since both open the camera: remove the container made by this repo's `dock.sh` first, e.g. with `./docker/dock.sh stepit-camera clean`, which removes the image too, to be built again, and the other way round.
 
 ## Continuous Integration
 
-Four GitHub Actions workflows run on every push and pull request, three of them as in StepIt Motors:
+Four GitHub Actions workflows check the project, three of them as in StepIt Motors. The first three run on every push and pull request, the last one only when the test page changes:
 
 | Workflow | What it checks |
 |---|---|
 | [`industrial_ci.yml`](.github/workflows/industrial_ci.yml) | Builds and tests the packages with [Industrial CI](https://github.com/ros-industrial/industrial_ci), against the main and the testing ROS repositories. The tests use the fake camera: no camera is needed. |
-| [`ci-format.yml`](.github/workflows/ci-format.yml) | The pre-commit hooks that need no ROS: clang-format, black, codespell, and the checks of whitespace and files. |
+| [`ci-format.yml`](.github/workflows/ci-format.yml) | The pre-commit hooks that need no ROS: clang-format, black, codespell, and the checks of whitespace and files. Then that every diagram is rendered from its source. |
 | [`ci-ros-lint.yml`](.github/workflows/ci-ros-lint.yml) | The ament linters of every package: copyright, lint_cmake and cpplint. |
-| [`web.yml`](.github/workflows/web.yml) | The test page: type checks, tests and build, when `web` changes. |
+| [`web.yml`](.github/workflows/web.yml) | The test page: type checks, tests and build, on a pull request or a push to `main` that changes `web`. |
 
 The workflows run locally with [Nektos `act`](https://github.com/nektos/act), which reads the variables of [`.env`](.env), from a clean checkout: Industrial CI mounts the working tree, `build` and `install` included. See [How to run GitHub Actions locally](https://github.com/kineticsystem/stepit-motors#how-to-run-github-actions-locally) in the README of StepIt Motors.
